@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NoCodeXport - Export your Webflow and Framer Website for Free (Clone)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        neuro: {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            900: '#0f172a',
+                            950: '#020617',
+                        },
+                        brand: {
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        },
+                        accent: {
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                        },
+                        success: {
+                            500: '#10b981',
+                            600: '#059669',
+                        },
+                        warning: {
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        },
+                        info: {
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'primary': '0 4px 14px 0 rgba(99, 102, 241, 0.39)',
+                        'neuro-lg': '4px 0 24px rgba(0,0,0,0.02)',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Alpine.js for interactivity -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Phosphor Icons (for the UI vectors) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('exportApp', () => ({
+                sidebarOpen: false, 
+                mode: 'single',
+                url: '',
+                isLoading: false,
+                error: null,
+                
+                async exportSite() {
+                    if (!this.url) {
+                        this.error = "Please enter a valid URL.";
+                        return;
+                    }
+                    this.error = null;
+                    this.isLoading = true;
+
+                    try {
+                        const endpoint = this.mode === 'single' ? '/api/export/single' : '/api/export/zip';
+                        const response = await fetch(`http://localhost:3000${endpoint}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ targetUrl: this.url })
+                        });
+
+                        if (!response.ok) {
+                            let errMessage = 'Export failed';
+                            try {
+                                const errData = await response.json();
+                                errMessage = errData.error || errMessage;
+                            } catch (e) {
+                                errMessage = `Error ${response.status}: Failed to reach or parse server response.`;
+                            }
+                            throw new Error(errMessage);
+                        }
+
+                        // Trigger download of the HTML file
+                        const blob = await response.blob();
+                        const downloadUrl = window.URL.createObjectURL(blob);
+                        
+                        // Extract filename from Content-Disposition if available
+                        let filename = this.mode === 'zip' ? 'export.zip' : 'export.html';
+                        const disposition = response.headers.get('content-disposition');
+                        if (disposition && disposition.indexOf('filename=') !== -1) {
+                            const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                            const matches = filenameRegex.exec(disposition);
+                            if (matches != null && matches[1]) { 
+                                filename = matches[1].replace(/['"]/g, '');
+                            }
+                        }
+
+                        const a = document.createElement('a');
+                        a.href = downloadUrl;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(downloadUrl);
+
+                    } catch (err) {
+                        this.error = err.message;
+                    } finally {
+                        this.isLoading = false;
+                    }
+                }
+            }))
+        })
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 12px;
+            border-radius: 12px;
+            color: #334155;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        .nav-link:hover {
+            background-color: #f1f5f9;
+            color: #0f172a;
+        }
+        .nav-link.active {
+            background-color: #eef2ff;
+            color: #4f46e5;
+        }
+    </style>
+</head>
+<body class="bg-neuro-100 text-neuro-900 overflow-x-hidden antialiased flex" x-data="exportApp">
+
+    <!-- Mobile Header Toggle -->
+    <button @click="sidebarOpen = true" class="lg:hidden fixed top-4 left-4 z-50 w-12 h-12 bg-white hover:bg-neuro-50 text-neuro-900 border border-neuro-200 rounded-xl shadow-sm flex items-center justify-center transition-all duration-300">
+        <i class="ph ph-list text-2xl"></i>
+    </button>
+
+    <!-- Sidebar Overlay -->
+    <div x-show="sidebarOpen" x-transition.opacity @click="sidebarOpen = false" class="fixed inset-0 bg-neuro-900/50 z-[60] lg:hidden"></div>
+
+    <!-- Sidebar -->
+    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed top-0 left-0 z-[70] h-screen w-[280px] bg-white border-r border-neuro-200 shadow-neuro-lg flex flex-col transition-transform duration-300 lg:translate-x-0">
+        <div class="flex items-center justify-between px-6 py-6 border-b border-neuro-100">
+            <a href="#" class="flex items-center gap-3 group">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-brand-500 shadow-primary flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
+                    <i class="ph-fill ph-check-circle text-white text-xl"></i>
+                </div>
+                <span class="text-xl font-bold tracking-tight text-neuro-950">NoCodeXport</span>
+            </a>
+            <button @click="sidebarOpen = false" class="lg:hidden text-neuro-500 hover:text-neuro-900">
+                <i class="ph ph-x text-xl"></i>
+            </button>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto px-4 py-6">
+            <div class="mb-8">
+                <h3 class="px-3 mb-3 text-xs font-bold uppercase tracking-wider text-neuro-500">Export Tools</h3>
+                <ul class="space-y-1">
+                    <li>
+                        <a href="#" class="nav-link">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-brand-500 to-brand-600 shadow-sm">
+                                <i class="ph-fill ph-framer-logo text-lg"></i>
+                            </div>
+                            <span class="flex-1">Framer</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="nav-link">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-accent-500 to-accent-600 shadow-sm">
+                                <i class="ph-fill ph-drop text-lg"></i>
+                            </div>
+                            <span class="flex-1">Webflow</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="nav-link">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-success-500 to-success-600 shadow-sm">
+                                <i class="ph-fill ph-globe text-lg"></i>
+                            </div>
+                            <span class="flex-1">Wix</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="nav-link">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-warning-500 to-warning-600 shadow-sm">
+                                <i class="ph-bold ph-wordpress-logo text-lg"></i>
+                            </div>
+                            <span class="flex-1">WordPress</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="nav-link">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-brand-600 to-accent-600 shadow-sm">
+                                <i class="ph-bold ph-squares-four text-lg"></i>
+                            </div>
+                            <span class="flex-1">More Tools</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="nav-link active">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-info-500 to-info-600 shadow-sm">
+                                <i class="ph-bold ph-file-zip text-lg"></i>
+                            </div>
+                            <span class="flex-1">ZIP Export</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            
+            <div>
+                <h3 class="px-3 mb-3 text-xs font-bold uppercase tracking-wider text-neuro-500">Resources</h3>
+                <ul class="space-y-1">
+                    <li>
+                        <a href="#" class="nav-link text-neuro-600">
+                            <i class="ph ph-info text-xl"></i>
+                            <span>About</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="nav-link text-neuro-600">
+                            <i class="ph ph-users text-xl"></i>
+                            <span>Community</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="nav-link text-neuro-600">
+                            <i class="ph ph-code text-xl"></i>
+                            <span>API</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 w-full lg:ml-[280px] min-h-screen bg-gradient-to-b from-white via-neuro-50 to-neuro-100 flex items-center justify-center p-4 py-16 lg:px-8">
+        <div class="w-full max-w-2xl relative">
+            
+            <!-- Glow background effect -->
+            <div class="absolute inset-0 -z-10 translate-y-8 bg-brand-500/20 blur-[100px] rounded-full"></div>
+
+            <div class="bg-white p-6 sm:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-neuro-200">
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl sm:text-4xl font-extrabold mb-3 text-neuro-950 tracking-tight">Export Any Site to HTML</h1>
+                    <p class="text-neuro-600 text-lg">Enter your site URL and we'll generate a simple HTML file for you to download.</p>
+                </div>
+
+                <!-- Toggles -->
+                <div class="mb-8">
+                    <div class="flex gap-2 p-1.5 bg-neuro-100 rounded-xl relative">
+                        <button @click="mode = 'single'" 
+                                :class="mode === 'single' ? 'bg-white text-brand-600 shadow-sm ring-1 ring-black/5' : 'text-neuro-600 hover:text-neuro-900'"
+                                class="flex-1 py-3 px-4 rounded-lg text-sm font-semibold transition-all duration-200">
+                            Single Page
+                        </button>
+                        <button @click="mode = 'zip'" 
+                                :class="mode === 'zip' ? 'bg-white text-brand-600 shadow-sm ring-1 ring-black/5' : 'text-neuro-600 hover:text-neuro-900'"
+                                class="flex-1 py-3 px-4 rounded-lg text-sm font-semibold transition-all duration-200">
+                            Full Site ZIP (Pro)
+                        </button>
+                    </div>
+                    <p class="text-xs text-neuro-500 text-center mt-3 font-medium" x-text="mode === 'single' ? 'Export only the specified page URL' : 'Export entire website as ZIP'"></p>
+                </div>
+
+                <!-- Error area -->
+                <div x-show="error" x-transition class="mb-5 p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-medium flex items-center gap-2">
+                    <i class="ph-fill ph-warning-circle text-lg"></i>
+                    <span x-text="error"></span>
+                </div>
+
+                <!-- Form Area -->
+                <div class="mb-5 relative group">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <i class="ph ph-link text-neuro-400 text-xl group-focus-within:text-brand-500 transition-colors"></i>
+                    </div>
+                    <input type="url" x-model="url" @keydown.enter="exportSite" placeholder="https://yourwebsite.com" class="w-full pl-11 pr-4 py-4 bg-white border border-neuro-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-brand-500/20 focus:border-brand-500 text-neuro-900 placeholder:text-neuro-400 transition-all font-medium text-lg shadow-sm" :disabled="isLoading" />
+                </div>
+                
+                <button @click="exportSite" :disabled="isLoading" class="w-full py-4 px-6 bg-brand-600 hover:bg-brand-700 active:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold text-lg transition-all shadow-primary hover:shadow-lg hover:-translate-y-0.5 flex items-center justify-center gap-2">
+                    <template x-if="isLoading">
+                        <i class="ph-bold ph-spinner animate-spin"></i>
+                    </template>
+                    <template x-if="!isLoading">
+                        <i class="ph-bold ph-download-simple"></i>
+                    </template>
+                    <span x-text="isLoading ? 'Exporting...' : 'Export Now'"></span>
+                </button>
+                
+                <div class="mt-5 text-center">
+                    <button class="text-sm font-medium text-neuro-500 hover:text-brand-600 transition-colors flex items-center justify-center gap-1.5 mx-auto">
+                        <i class="ph ph-chat-circle"></i>
+                        Need help? Chat with support
+                    </button>
+                </div>
+
+                <!-- Integrations -->
+                <div class="mt-10 pt-8 border-t border-neuro-100">
+                    <p class="text-sm text-neuro-500 text-center mb-6 font-semibold uppercase tracking-wider">Automatic watermark removal for</p>
+                    <div class="flex justify-center gap-4 sm:gap-6 overflow-x-auto px-2 pb-2 hide-scrollbar">
+                        <div class="w-24 h-24 sm:w-32 sm:h-28 bg-white rounded-2xl flex flex-col items-center justify-center border border-neuro-100 shadow-sm hover:shadow-md transition-shadow flex-shrink-0 group">
+                            <i class="ph-fill ph-framer-logo text-4xl text-neuro-400 group-hover:text-black transition-colors mb-2"></i>
+                            <span class="text-xs font-semibold text-neuro-600">Framer</span>
+                        </div>
+                        <div class="w-24 h-24 sm:w-32 sm:h-28 bg-white rounded-2xl flex flex-col items-center justify-center border border-neuro-100 shadow-sm hover:shadow-md transition-shadow flex-shrink-0 group">
+                            <i class="ph-fill ph-drop text-4xl text-neuro-400 group-hover:text-blue-600 transition-colors mb-2"></i>
+                            <span class="text-xs font-semibold text-neuro-600">Webflow</span>
+                        </div>
+                        <div class="w-24 h-24 sm:w-32 sm:h-28 bg-white rounded-2xl flex flex-col items-center justify-center border border-neuro-100 shadow-sm hover:shadow-md transition-shadow flex-shrink-0 group">
+                            <i class="ph-fill ph-globe text-4xl text-neuro-400 group-hover:text-black transition-colors mb-2"></i>
+                            <span class="text-xs font-semibold text-neuro-600">Wix</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAQ Section -->
+                <div class="mt-10 pt-8 border-t border-neuro-100" x-data="{ active: null }">
+                    <h3 class="text-xl font-bold text-neuro-950 text-center mb-6">Frequently Asked Questions</h3>
+                    <div class="space-y-3">
+                        
+                        <!-- FAQ 1 -->
+                        <div class="border border-neuro-200 rounded-xl overflow-hidden bg-neuro-50 hover:bg-white transition-colors">
+                            <button @click="active = active === 1 ? null : 1" class="w-full flex items-center justify-between p-5 text-left focus:outline-none">
+                                <span class="font-semibold text-neuro-900">Do I have the right to export my site?</span>
+                                <i class="ph ph-caret-down text-neuro-500 transition-transform duration-300" :class="active === 1 ? 'rotate-180' : ''"></i>
+                            </button>
+                            <div x-show="active === 1" x-collapse>
+                                <div class="px-5 pb-5 text-neuro-600 text-sm leading-relaxed">
+                                    Yes, you own your site's content and design. Our tool simply retrieves the HTML, CSS, and JS files from the public frontend URLs, helping you secure a backup or switch hosts easily.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FAQ 2 -->
+                        <div class="border border-neuro-200 rounded-xl overflow-hidden bg-neuro-50 hover:bg-white transition-colors">
+                            <button @click="active = active === 2 ? null : 2" class="w-full flex items-center justify-between p-5 text-left focus:outline-none">
+                                <span class="font-semibold text-neuro-900">How much money have users saved?</span>
+                                <i class="ph ph-caret-down text-neuro-500 transition-transform duration-300" :class="active === 2 ? 'rotate-180' : ''"></i>
+                            </button>
+                            <div x-show="active === 2" x-collapse>
+                                <div class="px-5 pb-5 text-neuro-600 text-sm leading-relaxed">
+                                    Our users save hundreds to thousands of dollars annually by moving to more affordable hosting solutions, completely eliminating restrictive subscription limits of standard page builders.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FAQ 3 -->
+                        <div class="border border-neuro-200 rounded-xl overflow-hidden bg-neuro-50 hover:bg-white transition-colors">
+                            <button @click="active = active === 3 ? null : 3" class="w-full flex items-center justify-between p-5 text-left focus:outline-none">
+                                <span class="font-semibold text-neuro-900">Does it export CMS content?</span>
+                                <i class="ph ph-caret-down text-neuro-500 transition-transform duration-300" :class="active === 3 ? 'rotate-180' : ''"></i>
+                            </button>
+                            <div x-show="active === 3" x-collapse>
+                                <div class="px-5 pb-5 text-neuro-600 text-sm leading-relaxed">
+                                    Yes, our "Full Site ZIP" method can crawl available internal links, downloading dynamic CMS pages as standalone HTML files, ensuring your complete site is preserved perfectly.
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+</body>
+</html>
