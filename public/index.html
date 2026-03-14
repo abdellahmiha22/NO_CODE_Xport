@@ -70,6 +70,10 @@
                 isLoading: false,
                 error: null,
                 
+                setMode(newMode) {
+                    this.mode = newMode;
+                    this.sidebarOpen = false;
+                },
                 async exportSite() {
                     if (!this.url) {
                         this.error = "Please enter a valid URL.";
@@ -180,7 +184,7 @@
                 <h3 class="px-3 mb-3 text-xs font-bold uppercase tracking-wider text-neuro-500">Export Tools</h3>
                 <ul class="space-y-1">
                     <li>
-                        <a href="#" class="nav-link">
+                        <a href="#" @click.prevent="setMode('single')" :class="mode === 'single' ? 'active' : ''" class="nav-link">
                             <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-brand-500 to-brand-600 shadow-sm">
                                 <i class="ph-fill ph-framer-logo text-lg"></i>
                             </div>
@@ -188,7 +192,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="#" class="nav-link">
+                        <a href="#" @click.prevent="setMode('single')" :class="mode === 'single' ? 'active' : ''" class="nav-link">
                             <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-accent-500 to-accent-600 shadow-sm">
                                 <i class="ph-fill ph-drop text-lg"></i>
                             </div>
@@ -196,7 +200,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="#" class="nav-link">
+                        <a href="#" @click.prevent="setMode('single')" :class="mode === 'single' ? 'active' : ''" class="nav-link">
                             <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-success-500 to-success-600 shadow-sm">
                                 <i class="ph-fill ph-globe text-lg"></i>
                             </div>
@@ -204,7 +208,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="#" class="nav-link">
+                        <a href="#" @click.prevent="setMode('single')" :class="mode === 'single' ? 'active' : ''" class="nav-link">
                             <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-warning-500 to-warning-600 shadow-sm">
                                 <i class="ph-bold ph-wordpress-logo text-lg"></i>
                             </div>
@@ -220,7 +224,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="#" class="nav-link active">
+                        <a href="#" @click.prevent="setMode('zip')" :class="mode === 'zip' ? 'active' : ''" class="nav-link">
                             <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-info-500 to-info-600 shadow-sm">
                                 <i class="ph-bold ph-file-zip text-lg"></i>
                             </div>
