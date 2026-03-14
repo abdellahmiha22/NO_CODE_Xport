@@ -5,24 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <!-- SEO Meta Tags -->
-    <title>NoCodeXport | #1 Webflow to HTML & Framer to HTML Converter</title>
-    <meta name="description" content="Convert Webflow to HTML, Framer to HTML, and Wix to HTML instantly for free. The most powerful website exporter with automatic watermark removal and clean, production-ready code.">
-    <meta name="keywords" content="webflow to html, framer to html, wix to html, export webflow to html free, download framer site, website exporter, nocode to html, export framer to code, wix website downloader">
-    <meta name="author" content="NoCodeXport">
-    <link rel="canonical" href="https://nocodexport.com">
+    <title>FreeHTML.pro | Export Webflow, Framer & Wix to HTML for Free</title>
+    <meta name="description" content="FreeHTML.pro is the #1 tool to convert Webflow to HTML, Framer to HTML, and Wix to HTML. Get production-ready code with no watermarks and instant downloads.">
+    <meta name="keywords" content="webflow to html, framer to html, wix to html, free html export, download website code, website code generator, freehtml, freehtml.pro">
+    <meta name="author" content="FreeHTML.pro">
+    <link rel="canonical" href="https://freehtml.pro">
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://nocodexport.com/">
-    <meta property="og:title" content="NoCodeXport | Export Webflow & Framer to HTML Instantly">
-    <meta property="og:description" content="Instant no-code website export. Clean HTML/CSS/JS with one click. Support for Webflow, Framer, and Wix.">
+    <meta property="og:url" content="https://freehtml.pro/">
+    <meta property="og:title" content="FreeHTML.pro | Instant No-Code to Code Export">
+    <meta property="og:description" content="The most advanced website exporter. Extract clean HTML/CSS/JS from Webflow, Framer, and Wix instantly.">
     <meta property="og:image" content="/favicon.png">
-
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://nocodexport.com/">
-    <meta property="twitter:title" content="NoCodeXport | Convert No-Code to Code">
-    <meta property="twitter:description" content="Clean HTML export from Webflow, Framer, and Wix. Save thousands on hosting fees.">
 
     <link rel="icon" type="image/png" href="/favicon.png">
 
@@ -96,6 +90,17 @@
             100% { transform: translateY(0px); }
         }
         .animate-float { animation: float 6s ease-in-out infinite; }
+        
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        @keyframes infinite-scroll {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+        }
+        .animate-infinite-scroll {
+            animation: infinite-scroll 40s linear infinite;
+        }
     </style>
 
     <script>
@@ -183,7 +188,7 @@
     <header class="lg:hidden flex items-center justify-between p-4 glass-panel sticky top-0 z-40">
         <div class="flex items-center gap-2">
             <img src="/favicon.png" alt="Logo" class="w-8 h-8 rounded-lg shadow-glow">
-            <span class="font-display font-bold text-lg">NoCodeXport</span>
+            <span class="font-display font-bold text-lg">FreeHTML</span>
         </div>
         <div class="flex items-center gap-3">
             <button @click="darkMode = !darkMode" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
@@ -207,8 +212,8 @@
                 <!-- Sidebar Header -->
                 <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                     <div class="flex items-center gap-3">
-                        <img src="/favicon.png" alt="NoCodeXport" class="w-10 h-10 rounded-xl shadow-premium animate-float">
-                        <span class="font-display font-bold text-xl tracking-tight">NoCodeXport</span>
+                        <img src="/favicon.png" alt="FreeHTML" class="w-10 h-10 rounded-xl shadow-premium animate-float">
+                        <span class="font-display font-bold text-xl tracking-tight">FreeHTML.pro</span>
                     </div>
                     <button @click="sidebarOpen = false" class="lg:hidden">
                         <i class="ph ph-x text-xl"></i>
@@ -264,9 +269,9 @@
                 <!-- Sidebar Footer -->
                 <div class="p-6 border-t border-slate-100 dark:border-slate-800">
                     <div class="bg-primary-600 rounded-2xl p-4 text-white shadow-glow relative overflow-hidden group">
-                        <div class="relative z-10 text-sm font-semibold mb-1">Upgrade to Pro</div>
-                        <div class="relative z-10 text-[11px] opacity-80 mb-3">Unlimited exports & bulk processing.</div>
-                        <button class="relative z-10 w-full bg-white text-primary-600 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 transition-colors">Go Unlimited</button>
+                        <div class="relative z-10 text-sm font-semibold mb-1">Unlock Pro Access</div>
+                        <div class="relative z-10 text-[11px] opacity-80 mb-3">Priority processing & full site backup.</div>
+                        <button class="relative z-10 w-full bg-white text-primary-600 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 transition-colors">Upgrade Now</button>
                         <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-white/10 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500"></div>
                     </div>
                 </div>
@@ -292,30 +297,27 @@
                             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75"></span>
                             <span class="relative inline-flex rounded-full h-2 w-2 bg-primary-500"></span>
                         </span>
-                        NEW: Improved Wix Export Engine
+                        NEW: Award Winning Export Technology
                     </div>
                     <h1 class="text-4xl md:text-6xl font-display font-bold tracking-tight">
-                        Convert <span class="gradient-text">No-Code</span> to <br>Clean Production Code
+                        The Ultimate <span class="gradient-text">FreeHTML</span><br>Source for No-Code
                     </h1>
                     <p class="max-w-2xl mx-auto text-slate-500 dark:text-slate-400 text-lg md:text-xl font-medium">
-                        Instantly export your Webflow, Framer, or Wix website to raw HTML, CSS, and JS. 
-                        No watermarks. No subscriptions. Just clean code.
+                        Instantly backup, migrate, or host your Webflow, Framer, and Wix sites anywhere. 
+                        Zero costs. Pure source code.
                     </p>
                 </header>
 
                 <!-- Export Module -->
                 <section class="glass-panel p-2 rounded-3xl shadow-premium border border-slate-200 dark:border-slate-800 max-w-2xl mx-auto relative group">
-                    <!-- Glow effect on hover -->
                     <div class="absolute -inset-1 bg-gradient-to-r from-primary-600 to-purple-600 rounded-[28px] opacity-0 group-focus-within:opacity-20 transition-opacity blur-lg -z-10"></div>
                     
                     <div class="p-6 md:p-10 space-y-8">
-                        <!-- Mode Tabs -->
                         <div class="flex p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl">
                             <button @click="mode = 'single'" :class="mode === 'single' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary-600 dark:text-primary-400' : 'text-slate-500 hover:text-slate-700'" class="flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all">Single Page</button>
                             <button @click="mode = 'zip'" :class="mode === 'zip' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary-600 dark:text-primary-400' : 'text-slate-500 hover:text-slate-700'" class="flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all">Full Site (ZIP)</button>
                         </div>
 
-                        <!-- Input Area -->
                         <div class="relative">
                             <div class="absolute inset-y-0 left-5 flex items-center pointer-events-none">
                                 <i class="ph ph-globe text-2xl text-slate-400" :class="{ 'text-primary-500': url }"></i>
@@ -324,13 +326,12 @@
                                 type="url" 
                                 x-model="url" 
                                 @keydown.enter="exportSite"
-                                placeholder="https://my-stunning-site.webflow.io" 
+                                placeholder="https://your-design.framer.website" 
                                 class="w-full pl-14 pr-6 py-5 bg-slate-50 dark:bg-slate-900/50 border-2 border-slate-100 dark:border-slate-800 rounded-2xl focus:outline-none focus:border-primary-500 dark:focus:border-primary-500 transition-all font-medium text-lg"
                                 :disabled="isLoading"
                             >
                         </div>
 
-                        <!-- Messages -->
                         <div x-show="error" x-cloak x-transition class="p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 rounded-2xl text-sm font-medium flex items-center gap-3">
                             <i class="ph-fill ph-warning-circle text-xl"></i>
                             <span x-text="error"></span>
@@ -338,10 +339,9 @@
                         
                         <div x-show="success" x-cloak x-transition class="p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400 rounded-2xl text-sm font-medium flex items-center gap-3">
                             <i class="ph-fill ph-check-circle text-xl"></i>
-                            <span>Success! Your export is ready and downloading.</span>
+                            <span>Success! Your package is ready for download.</span>
                         </div>
 
-                        <!-- Action Button -->
                         <button 
                             @click="exportSite" 
                             :disabled="isLoading" 
@@ -353,103 +353,110 @@
                             <template x-if="!isLoading">
                                 <i class="ph-bold ph-lightning text-2xl"></i>
                             </template>
-                            <span x-text="isLoading ? 'Crawling Website...' : 'Export to HTML' "></span>
+                            <span x-text="isLoading ? 'Parsing Design Assets...' : 'Download FreeHTML' "></span>
                         </button>
-
-                        <p class="text-center text-xs text-slate-400 font-medium tracking-wide">
-                            <i class="ph ph-shield-check inline-block mr-1"></i>
-                            Security verified. No login required.
-                        </p>
                     </div>
                 </section>
 
-                <!-- SEO / Features Section -->
-                <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Featured Section (Awwwards Style) -->
+                <section class="py-12 border-y border-slate-100 dark:border-slate-800 relative overflow-hidden">
+                    <div class="text-center mb-10">
+                        <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400 mb-2">As Seen On & Featured In</p>
+                    </div>
+                    
+                    <div class="flex overflow-hidden group">
+                        <div class="flex animate-infinite-scroll whitespace-nowrap items-center hover:[animation-play-state:paused]">
+                            <!-- Duplicate items for infinite effect -->
+                            <div class="flex items-center gap-12 sm:gap-24 px-12">
+                                <div class="flex items-center gap-2 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer">
+                                    <i class="ph-bold ph-award text-3xl text-primary-600"></i>
+                                    <span class="font-display font-bold text-xl">AWWWARDS.</span>
+                                </div>
+                                <div class="flex items-center gap-2 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer text-blue-500">
+                                    <i class="ph-fill ph-rocket-launch text-3xl"></i>
+                                    <span class="font-display font-bold text-xl uppercase italic">Product Hunt</span>
+                                </div>
+                                <div class="flex items-center gap-2 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer text-fuchsia-600">
+                                    <i class="ph-bold ph-sketch-logo text-3xl"></i>
+                                    <span class="font-display font-bold text-xl">CSSDA.</span>
+                                </div>
+                                <div class="flex items-center gap-2 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer text-slate-900 dark:text-white">
+                                    <i class="ph-bold ph-medium-logo text-3xl"></i>
+                                    <span class="font-display font-bold text-xl">Medium Design</span>
+                                </div>
+                                <div class="flex items-center gap-2 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer text-orange-600">
+                                    <i class="ph-bold ph-browser text-3xl"></i>
+                                    <span class="font-display font-bold text-xl uppercase">A-Design-Awards</span>
+                                </div>
+                            </div>
+                            <!-- Second set -->
+                            <div class="flex items-center gap-12 sm:gap-24 px-12">
+                                <div class="flex items-center gap-2 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer">
+                                    <i class="ph-bold ph-award text-3xl text-primary-600"></i>
+                                    <span class="font-display font-bold text-xl">AWWWARDS.</span>
+                                </div>
+                                <div class="flex items-center gap-2 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer text-blue-500">
+                                    <i class="ph-fill ph-rocket-launch text-3xl"></i>
+                                    <span class="font-display font-bold text-xl uppercase italic">Product Hunt</span>
+                                </div>
+                                <div class="flex items-center gap-2 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer text-fuchsia-600">
+                                    <i class="ph-bold ph-sketch-logo text-3xl"></i>
+                                    <span class="font-display font-bold text-xl">CSSDA.</span>
+                                </div>
+                                <div class="flex items-center gap-2 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer text-slate-900 dark:text-white">
+                                    <i class="ph-bold ph-medium-logo text-3xl"></i>
+                                    <span class="font-display font-bold text-xl">Medium Design</span>
+                                </div>
+                                <div class="flex items-center gap-2 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer text-orange-600">
+                                    <i class="ph-bold ph-browser text-3xl"></i>
+                                    <span class="font-display font-bold text-xl uppercase">A-Design-Awards</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
                     <div class="glass-panel p-6 rounded-3xl border border-slate-100 dark:border-slate-800 hover:border-primary-500/30 transition-colors">
                         <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 mb-4">
                             <i class="ph ph-magic-wand text-2xl"></i>
                         </div>
-                        <h4 class="font-bold text-lg mb-2">Webflow to HTML</h4>
+                        <h4 class="font-bold text-lg mb-2">Webflow Export</h4>
                         <p class="text-sm text-slate-500 leading-relaxed">Extract clean code from Webflow. Our engine automatically removes badges and converts assets for standalone hosting.</p>
                     </div>
                     <div class="glass-panel p-6 rounded-3xl border border-slate-100 dark:border-slate-800 hover:border-primary-500/30 transition-colors">
                         <div class="w-12 h-12 rounded-2xl bg-fuchsia-500/10 flex items-center justify-center text-fuchsia-500 mb-4">
                             <i class="ph ph-framer-logo text-2xl"></i>
                         </div>
-                        <h4 class="font-bold text-lg mb-2">Framer to HTML</h4>
+                        <h4 class="font-bold text-lg mb-2">Framer Export</h4>
                         <p class="text-sm text-slate-500 leading-relaxed">The only tool that reliably exports Framer sites. Perfect for transitioning from prototype to permanent hosting.</p>
                     </div>
                     <div class="glass-panel p-6 rounded-3xl border border-slate-100 dark:border-slate-800 hover:border-primary-500/30 transition-colors">
                         <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-4">
                             <i class="ph ph-globe text-2xl"></i>
                         </div>
-                        <h4 class="font-bold text-lg mb-2">Wix to HTML</h4>
+                        <h4 class="font-bold text-lg mb-2">Wix Export</h4>
                         <p class="text-sm text-slate-500 leading-relaxed">Break free from Wix subscriptions. Export your Wix site and host it anywhere for a fraction of the cost.</p>
                     </div>
                 </section>
 
-                <!-- FAQ Section (SEO Optimized) -->
-                <section class="space-y-8 py-12" x-data="{ active: 1 }">
-                    <div class="text-center space-y-4">
-                        <h2 class="text-3xl font-display font-bold">Frequently Asked Questions</h2>
-                        <p class="text-slate-500">Everything you need to know about exporting your no-code site.</p>
-                    </div>
-
-                    <div class="max-w-2xl mx-auto space-y-4">
-                        <!-- FAQ 1 -->
-                        <div class="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-                            <button @click="active = active === 1 ? null : 1" class="w-full flex items-center justify-between p-5 text-left bg-white dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                                <span class="font-bold">How do I export Webflow to HTML for free?</span>
-                                <i class="ph ph-caret-down transition-transform" :class="active === 1 ? 'rotate-180' : ''"></i>
-                            </button>
-                            <div x-show="active === 1" x-cloak x-collapse class="">
-                                <div class="p-5 text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-transparent leading-relaxed border-t border-slate-100 dark:border-slate-800">
-                                    To export Webflow to HTML, simply copy your Webflow staging URL (e.g., mysite.webflow.io) and paste it into our search bar. Click "Export Now" and our engine will crawl the site, remove the Webflow watermark, and provide a download link for your clean HTML files.
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- FAQ 2 -->
-                        <div class="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-                            <button @click="active = active === 2 ? null : 2" class="w-full flex items-center justify-between p-5 text-left bg-white dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                                <span class="font-bold">Can I export Framer to HTML and host it elsewhere?</span>
-                                <i class="ph ph-caret-down transition-transform" :class="active === 2 ? 'rotate-180' : ''"></i>
-                            </button>
-                            <div x-show="active === 2" x-cloak x-collapse class="">
-                                <div class="p-5 text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-transparent leading-relaxed border-t border-slate-100 dark:border-slate-800">
-                                    Yes! Framer doesn't natively support free exporting, but NoCodeXport allows you to download your Framer project as raw HTML. This enables you to host your site on Vercel, Netlify, or any static hosting provider, potentially saving you over $200 per year on Framer's hosting plans.
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- FAQ 3 -->
-                        <div class="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-                            <button @click="active = active === 3 ? null : 3" class="w-full flex items-center justify-between p-5 text-left bg-white dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                                <span class="font-bold">Does NoCodeXport remove Wix ads and watermarks?</span>
-                                <i class="ph ph-caret-down transition-transform" :class="active === 3 ? 'rotate-180' : ''"></i>
-                            </button>
-                            <div x-show="active === 3" x-cloak x-collapse class="">
-                                <div class="p-5 text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-transparent leading-relaxed border-t border-slate-100 dark:border-slate-800">
-                                    Our advanced Wix to HTML converter identifies Wix-specific ad scripts and CSS banners. It strips them during the export process, providing you with a clean, professional version of your site that's ready for any host without the restrictive Wix ads.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
                 <footer class="text-center pt-8 border-t border-slate-200 dark:border-slate-800 text-slate-400 text-sm pb-12">
-                    <p>&copy; 2026 NoCodeXport. All rights reserved. Built for creators.</p>
+                    <div class="flex justify-center gap-6 mb-4">
+                        <a href="#" class="hover:text-primary-500 transition-colors">Privacy</a>
+                        <a href="#" class="hover:text-primary-500 transition-colors">Terms</a>
+                        <a href="#" class="hover:text-primary-500 transition-colors">Status</a>
+                    </div>
+                    <p>&copy; 2026 FreeHTML.pro. Award-winning export technology for designers.</p>
                 </footer>
             </div>
         </main>
     </div>
 
-    <!-- Structured Data for SEO -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
-      "name": "NoCodeXport",
+      "name": "FreeHTML.pro",
       "operatingSystem": "Web",
       "applicationCategory": "DeveloperApplication",
       "offers": {
@@ -457,7 +464,7 @@
         "price": "0",
         "priceCurrency": "USD"
       },
-      "description": "Convert Webflow to HTML, Framer to HTML and Wix to HTML instantly."
+      "description": "Premium website exporter for Webflow, Framer and Wix."
     }
     </script>
 </body>
