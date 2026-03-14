@@ -261,12 +261,16 @@ app.post('/api/export/zip', async (req, res) => {
 });
 
 const port = process.env.PORT || 3000;
-// Need a process exit wrapper to restart server gracefully if user re-runs
-const server = app.listen(port, () => {
-    console.log(`Export Server running on http://localhost:${port}`);
-}).on('error', (e) => {
-    if (e.code === 'EADDRINUSE') {
-        console.error(`Port ${port} is already in use.`);
-        process.exit(1);
-    }
-});
+
+if (process.env.NODE_ENV !== 'production') {
+    const server = app.listen(port, () => {
+        console.log(`Export Server running on http://localhost:${port}`);
+    }).on('error', (e) => {
+        if (e.code === 'EADDRINUSE') {
+            console.error(`Port ${port} is already in use.`);
+            process.exit(1);
+        }
+    });
+}
+
+module.exports = app;
