@@ -107,7 +107,7 @@
         document.addEventListener('alpine:init', () => {
             Alpine.data('exportApp', () => ({
                 sidebarOpen: false,
-                darkMode: false,
+                darkMode: true, // Defaulting to dark mode for premium feel
                 pricingOpen: false,
                 mode: 'single',
                 url: '',
@@ -117,9 +117,14 @@
                 success: false,
                 
                 init() {
-                    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                        this.darkMode = true;
+                    // Check local storage or system preference
+                    if (localStorage.getItem('darkMode') === 'false') {
+                        this.darkMode = false;
                     }
+                },
+                toggleTheme() {
+                    this.darkMode = !this.darkMode;
+                    localStorage.setItem('darkMode', this.darkMode);
                 },
                 setPlatform(p) {
                     this.platform = p;
@@ -192,7 +197,7 @@
             <span class="font-display font-bold text-lg">FreeHTML</span>
         </div>
         <div class="flex items-center gap-3">
-            <button @click="darkMode = !darkMode" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+            <button @click="toggleTheme()" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
                 <i class="ph" :class="darkMode ? 'ph-sun' : 'ph-moon'"></i>
             </button>
             <button @click="sidebarOpen = true" class="p-2 rounded-xl bg-primary-600 text-white shadow-glow">
@@ -206,74 +211,80 @@
         
         <!-- Sidebar -->
         <aside 
-            class="fixed inset-y-0 left-0 z-50 w-[280px] glass-panel border-r border-slate-200 dark:border-slate-800 transition-transform duration-300 lg:translate-x-0 lg:static"
+            class="fixed inset-y-0 left-0 z-50 w-[300px] glass-panel border-r border-slate-200 dark:border-slate-800 transition-transform duration-300 lg:translate-x-0 lg:static"
             :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
         >
             <div class="flex flex-col h-full">
                 <!-- Sidebar Header -->
-                <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <img src="/favicon.png" alt="FreeHTML" class="w-10 h-10 rounded-xl shadow-premium animate-float">
-                        <span class="font-display font-bold text-xl tracking-tight">FreeHTML.pro</span>
+                <div class="p-8 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <img src="/favicon.png" alt="FreeHTML" class="w-12 h-12 rounded-2xl shadow-premium animate-float ring-4 ring-primary-500/10">
+                        <span class="font-display font-bold text-2xl tracking-tight">FreeHTML</span>
                     </div>
-                    <button @click="sidebarOpen = false" class="lg:hidden">
-                        <i class="ph ph-x text-xl"></i>
-                    </button>
                 </div>
 
                 <!-- Navigation -->
-                <nav class="flex-1 p-4 space-y-8 overflow-y-auto">
+                <nav class="flex-1 p-6 space-y-10 overflow-y-auto">
                     <div>
-                        <h3 class="px-3 mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Export Engines</h3>
-                        <ul class="space-y-2">
+                        <h3 class="px-3 mb-6 text-[11px] font-bold uppercase tracking-[0.25em] text-slate-400">Export Engines</h3>
+                        <ul class="space-y-3">
                             <li>
-                                <button @click="setPlatform('framer')" :class="platform === 'framer' ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium">
-                                    <i class="ph-fill ph-framer-logo text-xl"></i>
+                                <button @click="setPlatform('framer')" :class="platform === 'framer' ? 'bg-primary-600 text-white shadow-glow' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50'" class="w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all font-semibold">
+                                    <i class="ph-fill ph-framer-logo text-2xl"></i>
                                     <span>Framer to HTML</span>
                                 </button>
                             </li>
                             <li>
-                                <button @click="setPlatform('webflow')" :class="platform === 'webflow' ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium">
-                                    <i class="ph-fill ph-drop text-xl"></i>
+                                <button @click="setPlatform('webflow')" :class="platform === 'webflow' ? 'bg-primary-600 text-white shadow-glow' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50'" class="w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all font-semibold">
+                                    <i class="ph-fill ph-drop text-2xl"></i>
                                     <span>Webflow to HTML</span>
                                 </button>
                             </li>
                             <li>
-                                <button @click="setPlatform('wix')" :class="platform === 'wix' ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium">
-                                    <i class="ph-fill ph-globe text-xl"></i>
+                                <button @click="setPlatform('wix')" :class="platform === 'wix' ? 'bg-primary-600 text-white shadow-glow' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50'" class="w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all font-semibold">
+                                    <i class="ph-fill ph-globe text-2xl"></i>
                                     <span>Wix to HTML</span>
                                 </button>
                             </li>
                             <li>
-                                <button @click="pricingOpen = true" :class="mode === 'zip' ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium">
-                                    <i class="ph-fill ph-file-zip text-xl"></i>
+                                <button @click="pricingOpen = true" class="w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50 border-2 border-dashed border-slate-200 dark:border-slate-800 group">
+                                    <i class="ph-fill ph-file-zip text-2xl group-hover:text-primary-500"></i>
                                     <span>Full Site Export</span>
-                                    <span class="ml-auto text-[10px] bg-primary-100 dark:bg-primary-950 text-primary-600 px-1.5 py-0.5 rounded-md">PRO</span>
+                                    <span class="ml-auto text-[10px] bg-primary-100 dark:bg-primary-950 text-primary-600 px-2 py-0.5 rounded-lg">PRO</span>
                                 </button>
                             </li>
                         </ul>
                     </div>
 
                     <div>
-                        <h3 class="px-3 mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Settings</h3>
-                        <ul class="space-y-2">
+                        <h3 class="px-3 mb-6 text-[11px] font-bold uppercase tracking-[0.25em] text-slate-400">Settings</h3>
+                        <ul class="space-y-3">
                             <li>
-                                <button @click="darkMode = !darkMode" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-all font-medium">
-                                    <i class="ph text-xl" :class="darkMode ? 'ph-sun' : 'ph-moon'"></i>
-                                    <span x-text="darkMode ? 'Light Mode' : 'Dark Mode'"></span>
+                                <button @click="toggleTheme()" class="w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-all font-semibold">
+                                    <i class="ph text-2xl" :class="darkMode ? 'ph-sun' : 'ph-moon'"></i>
+                                    <span x-text="darkMode ? 'Light mode' : 'Dark mode'"></span>
                                 </button>
                             </li>
                         </ul>
                     </div>
                 </nav>
 
-                <!-- Sidebar Footer -->
-                <div class="p-6 border-t border-slate-100 dark:border-slate-800">
-                    <div class="bg-primary-600 rounded-2xl p-4 text-white shadow-glow relative overflow-hidden group">
-                        <div class="relative z-10 text-sm font-semibold mb-1" x-text="pricingOpen ? 'Viewing Plans' : 'Unlock Pro Access'"></div>
-                        <div class="relative z-10 text-[11px] opacity-80 mb-3">Priority processing & full site backup.</div>
-                        <button @click="pricingOpen = true" class="relative z-10 w-full bg-white text-primary-600 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 transition-colors">Upgrade Now</button>
-                        <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-white/10 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500"></div>
+                <!-- Sidebar Footer (Upgrade Downside Section) -->
+                <div class="p-6 border-t border-slate-100 dark:border-slate-800 mt-auto">
+                    <div class="bg-gradient-to-br from-primary-600 to-indigo-700 rounded-3xl p-6 text-white shadow-glow relative overflow-hidden group cursor-pointer" @click="pricingOpen = true">
+                        <div class="relative z-10">
+                            <h4 class="font-display font-bold text-lg mb-1">Upgrade To Pro</h4>
+                            <p class="text-[12px] opacity-90 leading-relaxed mb-4">Export full websites and remove all limitations today.</p>
+                            <div class="flex items-center gap-2 text-[13px] font-bold">
+                                <span>Get Started</span>
+                                <i class="ph-bold ph-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                            </div>
+                        </div>
+                        <!-- Decorative background -->
+                        <div class="absolute -right-6 -bottom-6 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+                        <div class="absolute top-2 right-4 opacity-20">
+                            <i class="ph-fill ph-sketch-logo text-4xl"></i>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -288,133 +299,134 @@
         ></div>
 
         <!-- Main Content -->
-        <main class="flex-1 p-6 lg:p-12">
-            <div class="max-w-4xl mx-auto space-y-12">
+        <main class="flex-1 p-6 lg:p-12 overflow-x-hidden">
+            <div class="max-w-5xl mx-auto space-y-16">
                 
                 <!-- Hero Section -->
-                <header class="text-center space-y-6">
-                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500/10 text-primary-600 dark:text-primary-400 text-xs font-bold border border-primary-500/20">
-                        <span class="relative flex h-2 w-2">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-2 w-2 bg-primary-500"></span>
-                        </span>
-                        NEW: Award Winning Export Technology
+                <header class="text-center space-y-8 py-4">
+                    <div class="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-primary-500/10 text-primary-600 dark:text-primary-400 text-xs font-bold border border-primary-500/20">
+                        <div class="flex -space-x-2">
+                            <div class="w-6 h-6 rounded-full bg-indigo-500 border-2 border-white dark:border-slate-950 flex items-center justify-center"><i class="ph-fill ph-drop text-[10px] text-white"></i></div>
+                            <div class="w-6 h-6 rounded-full bg-fuchsia-500 border-2 border-white dark:border-slate-950 flex items-center justify-center"><i class="ph-fill ph-framer-logo text-[10px] text-white"></i></div>
+                            <div class="w-6 h-6 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-950 flex items-center justify-center"><i class="ph-fill ph-globe text-[10px] text-white"></i></div>
+                        </div>
+                        OVER 1,000,000 SITES EXPORTED
                     </div>
-                    <h1 class="text-4xl md:text-6xl font-display font-bold tracking-tight">
-                        The Ultimate <span class="gradient-text">FreeHTML</span><br>Source for No-Code
+                    <h1 class="text-5xl md:text-7xl font-display font-bold tracking-tight leading-[1.1]">
+                        The Professional <br class="hidden md:block"> <span class="gradient-text">Website Exporter</span>
                     </h1>
-                    <p class="max-w-2xl mx-auto text-slate-500 dark:text-slate-400 text-lg md:text-xl font-medium">
-                        Instantly backup, migrate, or host your Webflow, Framer, and Wix sites anywhere. 
-                        Zero costs. Pure source code.
+                    <p class="max-w-2xl mx-auto text-slate-500 dark:text-slate-400 text-lg md:text-2xl font-medium leading-relaxed">
+                        Export production-ready HTML, CSS, and JS from <span class="text-slate-900 dark:text-white underline decoration-primary-500/50">Framer</span>, <span class="text-slate-900 dark:text-white underline decoration-primary-500/50">Webflow</span>, and <span class="text-slate-900 dark:text-white underline decoration-primary-500/50">Wix</span> instantly.
                     </p>
                 </header>
 
-                <!-- Export Module -->
-                <section class="glass-panel p-2 rounded-3xl shadow-premium border border-slate-200 dark:border-slate-800 max-w-2xl mx-auto relative group">
-                    <div class="absolute -inset-1 bg-gradient-to-r from-primary-600 to-purple-600 rounded-[28px] opacity-0 group-focus-within:opacity-20 transition-opacity blur-lg -z-10"></div>
+                <!-- Featured Section (Always Visible) -->
+                <section class="py-12 border-y border-slate-100 dark:border-slate-800 relative overflow-hidden glass-panel rounded-[2rem]">
+                    <div class="text-center mb-10">
+                        <p class="text-[11px] font-bold uppercase tracking-[0.4em] text-slate-400 mb-2">Featured on the world's best platforms</p>
+                    </div>
                     
-                    <div class="p-6 md:p-10 space-y-8">
-                        <div class="flex p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl">
-                            <button @click="mode = 'single'" :class="mode === 'single' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary-600 dark:text-primary-400' : 'text-slate-500 hover:text-slate-700'" class="flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all">Single Page</button>
-                            <button @click="pricingOpen = true" class="flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all text-slate-500 hover:text-slate-700 flex items-center justify-center gap-2">
-                                Full Site (ZIP)
-                                <span class="text-[10px] bg-primary-100 dark:bg-primary-950 text-primary-600 px-1.5 py-0.5 rounded-md">PRO</span>
+                    <div class="flex overflow-hidden group">
+                        <div class="flex animate-infinite-scroll whitespace-nowrap items-center hover:[animation-play-state:paused]">
+                            <div class="flex items-center gap-16 sm:gap-32 px-16">
+                                <div class="flex items-center gap-3 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer">
+                                    <i class="ph-bold ph-award text-4xl text-primary-600"></i>
+                                    <span class="font-display font-bold text-2xl">AWWWARDS.</span>
+                                </div>
+                                <div class="flex items-center gap-3 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer text-blue-500">
+                                    <i class="ph-fill ph-rocket-launch text-4xl"></i>
+                                    <span class="font-display font-bold text-2xl uppercase italic">Product Hunt</span>
+                                </div>
+                                <div class="flex items-center gap-3 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer text-fuchsia-600">
+                                    <i class="ph-bold ph-sketch-logo text-4xl"></i>
+                                    <span class="font-display font-bold text-2xl">CSSDA.</span>
+                                </div>
+                                <div class="flex items-center gap-3 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer text-slate-900 dark:text-white">
+                                    <i class="ph-bold ph-medium-logo text-4xl"></i>
+                                    <span class="font-display font-bold text-2xl">Medium Design</span>
+                                </div>
+                                <div class="flex items-center gap-3 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer text-orange-600">
+                                    <i class="ph-bold ph-browser text-4xl"></i>
+                                    <span class="font-display font-bold text-2xl uppercase">A-Design-Awards</span>
+                                </div>
+                            </div>
+                            <!-- Second set for seamless scroll -->
+                            <div class="flex items-center gap-16 sm:gap-32 px-16">
+                                <div class="flex items-center gap-3 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer">
+                                    <i class="ph-bold ph-award text-4xl text-primary-600"></i>
+                                    <span class="font-display font-bold text-2xl">AWWWARDS.</span>
+                                </div>
+                                <div class="flex items-center gap-3 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer text-blue-500">
+                                    <i class="ph-fill ph-rocket-launch text-4xl"></i>
+                                    <span class="font-display font-bold text-2xl uppercase italic">Product Hunt</span>
+                                </div>
+                                <div class="flex items-center gap-3 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer text-fuchsia-600">
+                                    <i class="ph-bold ph-sketch-logo text-4xl"></i>
+                                    <span class="font-display font-bold text-2xl">CSSDA.</span>
+                                </div>
+                                <div class="flex items-center gap-3 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer text-slate-900 dark:text-white">
+                                    <i class="ph-bold ph-medium-logo text-4xl"></i>
+                                    <span class="font-display font-bold text-2xl">Medium Design</span>
+                                </div>
+                                <div class="flex items-center gap-3 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer text-orange-600">
+                                    <i class="ph-bold ph-browser text-4xl"></i>
+                                    <span class="font-display font-bold text-2xl uppercase">A-Design-Awards</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Main Export Tool -->
+                <section class="glass-panel p-2 rounded-[3rem] shadow-premium border border-slate-200 dark:border-slate-800 max-w-2xl mx-auto relative group">
+                    <div class="absolute -inset-1.5 bg-gradient-to-r from-primary-600 to-indigo-600 rounded-[3.2rem] opacity-0 group-focus-within:opacity-25 transition-opacity blur-xl -z-10"></div>
+                    
+                    <div class="p-8 md:p-12 space-y-10 text-center">
+                        <div class="flex p-1.5 bg-slate-100 dark:bg-slate-900/50 rounded-2xl max-w-md mx-auto">
+                            <button @click="mode = 'single'" :class="mode === 'single' ? 'bg-white dark:bg-slate-800 shadow-xl scale-[1.02] text-primary-600 dark:text-primary-400' : 'text-slate-500 hover:text-slate-700'" class="flex-1 py-3 px-6 rounded-xl text-sm font-bold transition-all transform duration-300">Single Page</button>
+                            <button @click="pricingOpen = true" class="flex-1 py-3 px-6 rounded-xl text-sm font-bold transition-all text-slate-500 hover:text-slate-700 flex items-center justify-center gap-2">
+                                Full ZIP
+                                <span class="text-[10px] bg-primary-100 dark:bg-primary-950 text-primary-600 px-2 py-0.5 rounded-lg font-black">PRO</span>
                             </button>
                         </div>
 
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-                                <i class="ph ph-globe text-2xl text-slate-400" :class="{ 'text-primary-500': url }"></i>
+                        <div class="relative max-w-lg mx-auto">
+                            <div class="absolute inset-y-0 left-6 flex items-center pointer-events-none">
+                                <i class="ph ph-link-simple text-2xl text-slate-400" :class="{ 'text-primary-500 scale-110 transition-transform': url }"></i>
                             </div>
                             <input 
                                 type="url" 
                                 x-model="url" 
                                 @keydown.enter="exportSite"
-                                placeholder="https://your-design.framer.website" 
-                                class="w-full pl-14 pr-6 py-5 bg-slate-50 dark:bg-slate-900/50 border-2 border-slate-100 dark:border-slate-800 rounded-2xl focus:outline-none focus:border-primary-500 dark:focus:border-primary-500 transition-all font-medium text-lg"
+                                placeholder="Paste your website URL..." 
+                                class="w-full pl-16 pr-8 py-6 bg-slate-50 dark:bg-slate-950/30 border-2 border-slate-100 dark:border-slate-800 rounded-3xl focus:outline-none focus:border-primary-500 dark:focus:border-white transition-all font-medium text-xl shadow-inner"
                                 :disabled="isLoading"
                             >
                         </div>
 
-                        <div x-show="error" x-cloak x-transition class="p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 rounded-2xl text-sm font-medium flex items-center gap-3">
-                            <i class="ph-fill ph-warning-circle text-xl"></i>
+                        <div x-show="error" x-cloak x-transition class="p-5 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 rounded-[2rem] text-sm font-medium flex items-center gap-4">
+                            <i class="ph-fill ph-warning-circle text-2xl"></i>
                             <span x-text="error"></span>
                         </div>
                         
-                        <div x-show="success" x-cloak x-transition class="p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400 rounded-2xl text-sm font-medium flex items-center gap-3">
-                            <i class="ph-fill ph-check-circle text-xl"></i>
-                            <span>Success! Your package is ready for download.</span>
+                        <div x-show="success" x-cloak x-transition class="p-5 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 text-emerald-600 dark:text-emerald-400 rounded-[2rem] text-sm font-medium flex items-center gap-4">
+                            <i class="ph-fill ph-check-circle text-2xl"></i>
+                            <span>Build complete! Your download started automatically.</span>
                         </div>
 
                         <button 
                             @click="exportSite" 
                             :disabled="isLoading" 
-                            class="w-full py-5 px-8 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-2xl font-bold text-lg shadow-glow hover:shadow-primary-500/50 transition-all active:scale-[0.98] flex items-center justify-center gap-3"
+                            class="w-full py-6 px-10 bg-primary-600 hover:bg-primary-500 disabled:opacity-50 text-white rounded-3xl font-black text-xl shadow-glow transition-all active:scale-[0.97] flex items-center justify-center gap-4 group"
                         >
                             <template x-if="isLoading">
-                                <i class="ph-bold ph-spinner animate-spin text-2xl"></i>
+                                <i class="ph-bold ph-spinner animate-spin text-3xl"></i>
                             </template>
                             <template x-if="!isLoading">
-                                <i class="ph-bold ph-lightning text-2xl"></i>
+                                <i class="ph-bold ph-lightning text-3xl group-hover:animate-pulse"></i>
                             </template>
-                            <span x-text="isLoading ? 'Parsing Design Assets...' : 'Download FreeHTML' "></span>
+                            <span x-text="isLoading ? 'Optimizing Codebase...' : 'Export Source Code' "></span>
                         </button>
-                    </div>
-                </section>
-
-                <!-- Featured Section (Infinite Scroll) -->
-                <section class="py-12 border-y border-slate-100 dark:border-slate-800 relative overflow-hidden">
-                    <div class="text-center mb-10">
-                        <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400 mb-2">As Seen On & Featured In</p>
-                    </div>
-                    
-                    <div class="flex overflow-hidden group">
-                        <div class="flex animate-infinite-scroll whitespace-nowrap items-center hover:[animation-play-state:paused]">
-                            <div class="flex items-center gap-12 sm:gap-24 px-12">
-                                <div class="flex items-center gap-2 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer">
-                                    <i class="ph-bold ph-award text-3xl text-primary-600"></i>
-                                    <span class="font-display font-bold text-xl">AWWWARDS.</span>
-                                </div>
-                                <div class="flex items-center gap-2 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer text-blue-500">
-                                    <i class="ph-fill ph-rocket-launch text-3xl"></i>
-                                    <span class="font-display font-bold text-xl uppercase italic">Product Hunt</span>
-                                </div>
-                                <div class="flex items-center gap-2 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer text-fuchsia-600">
-                                    <i class="ph-bold ph-sketch-logo text-3xl"></i>
-                                    <span class="font-display font-bold text-xl">CSSDA.</span>
-                                </div>
-                                <div class="flex items-center gap-2 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer text-slate-900 dark:text-white">
-                                    <i class="ph-bold ph-medium-logo text-3xl"></i>
-                                    <span class="font-display font-bold text-xl">Medium Design</span>
-                                </div>
-                                <div class="flex items-center gap-2 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer text-orange-600">
-                                    <i class="ph-bold ph-browser text-3xl"></i>
-                                    <span class="font-display font-bold text-xl uppercase">A-Design-Awards</span>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-12 sm:gap-24 px-12">
-                                <div class="flex items-center gap-2 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer">
-                                    <i class="ph-bold ph-award text-3xl text-primary-600"></i>
-                                    <span class="font-display font-bold text-xl">AWWWARDS.</span>
-                                </div>
-                                <div class="flex items-center gap-2 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer text-blue-500">
-                                    <i class="ph-fill ph-rocket-launch text-3xl"></i>
-                                    <span class="font-display font-bold text-xl uppercase italic">Product Hunt</span>
-                                </div>
-                                <div class="flex items-center gap-2 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer text-fuchsia-600">
-                                    <i class="ph-bold ph-sketch-logo text-3xl"></i>
-                                    <span class="font-display font-bold text-xl">CSSDA.</span>
-                                </div>
-                                <div class="flex items-center gap-2 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer text-slate-900 dark:text-white">
-                                    <i class="ph-bold ph-medium-logo text-3xl"></i>
-                                    <span class="font-display font-bold text-xl">Medium Design</span>
-                                </div>
-                                <div class="flex items-center gap-2 grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer text-orange-600">
-                                    <i class="ph-bold ph-browser text-3xl"></i>
-                                    <span class="font-display font-bold text-xl uppercase">A-Design-Awards</span>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </section>
 
@@ -422,178 +434,178 @@
                 <div 
                     x-show="pricingOpen" 
                     x-cloak
-                    class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-hidden"
+                    class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-8 overflow-hidden"
                 >
                     <!-- Backdrop -->
                     <div 
                         x-show="pricingOpen"
-                        x-transition:enter="transition ease-out duration-300"
-                        x-transition:enter-start="opacity-0"
-                        x-transition:enter-end="opacity-100"
-                        x-transition:leave="transition ease-in duration-200"
-                        x-transition:leave-start="opacity-100"
-                        x-transition:leave-end="opacity-0"
+                        x-transition.opacity
                         @click="pricingOpen = false" 
-                        class="absolute inset-0 bg-slate-950/60 backdrop-blur-md"
+                        class="absolute inset-0 bg-slate-950/80 backdrop-blur-xl"
                     ></div>
                     
                     <!-- Content -->
                     <div 
                         x-show="pricingOpen"
-                        x-transition:enter="transition ease-out duration-300"
-                        x-transition:enter-start="opacity-0 translate-y-8 scale-95"
+                        x-transition:enter="transition ease-out duration-500"
+                        x-transition:enter-start="opacity-0 translate-y-24 scale-90"
                         x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-                        x-transition:leave="transition ease-in duration-200"
-                        x-transition:leave-start="opacity-100 translate-y-0 scale-100"
-                        x-transition:leave-end="opacity-0 translate-y-8 scale-95"
-                        class="relative w-full max-w-5xl glass-panel !bg-white dark:!bg-slate-900 rounded-[2.5rem] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+                        class="relative w-full max-w-6xl glass-panel !bg-white dark:!bg-slate-900 rounded-[3rem] shadow-2xl overflow-hidden max-h-[95vh] flex flex-col"
                     >
                         <!-- Modal Header -->
-                        <div class="p-8 pb-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
-                            <div>
-                                <h2 class="text-3xl font-display font-bold tracking-tight">Simple, Transparent Pricing</h2>
-                                <p class="text-slate-500 dark:text-slate-400 mt-1">Unlock the full power of FreeHTML.pro.</p>
+                        <div class="p-10 pb-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+                            <div class="space-y-1">
+                                <h2 class="text-4xl font-display font-bold tracking-tight">Access the Pro Engine</h2>
+                                <p class="text-slate-500 dark:text-slate-400 text-lg">Scale your workflow with professional tools.</p>
                             </div>
-                            <button @click="pricingOpen = false" class="p-3 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                                <i class="ph ph-x text-2xl"></i>
+                            <button @click="pricingOpen = false" class="p-4 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                                <i class="ph ph-x text-3xl"></i>
                             </button>
                         </div>
 
                         <!-- Modal Body -->
-                        <div class="flex-1 overflow-y-auto p-8 lg:p-12">
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+                        <div class="flex-1 overflow-y-auto p-10 lg:p-16">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-10 items-stretch">
                                 <!-- Starter Plan -->
-                                <div class="p-8 rounded-[2rem] bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 flex flex-col hover:border-primary-500/30 transition-all group">
-                                    <div class="mb-6">
-                                        <div class="text-primary-600 dark:text-primary-400 font-bold text-[10px] uppercase tracking-widest mb-2">Starter</div>
-                                        <div class="flex items-baseline gap-1">
-                                            <span class="text-4xl font-display font-bold">$3</span>
-                                            <span class="text-slate-500 text-sm">/monthly</span>
+                                <div class="p-10 rounded-[3rem] bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-800 flex flex-col hover:border-primary-500/30 transition-all group">
+                                    <div class="mb-8">
+                                        <div class="text-primary-600 dark:text-primary-400 font-black text-xs uppercase tracking-widest mb-3">Starter</div>
+                                        <div class="flex items-baseline gap-2">
+                                            <span class="text-5xl font-display font-black">$3</span>
+                                            <span class="text-slate-400 text-sm">/mo</span>
                                         </div>
                                     </div>
-                                    <ul class="space-y-4 mb-10 flex-1">
-                                        <li class="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
-                                            <i class="ph-bold ph-check text-emerald-500"></i>
-                                            <span>10 Single-Page Exports</span>
+                                    <ul class="space-y-5 mb-12 flex-1">
+                                        <li class="flex items-center gap-4 text-slate-600 dark:text-slate-300">
+                                            <i class="ph-bold ph-check text-emerald-500 text-lg"></i>
+                                            <span class="font-medium">10 Single-Page Exports</span>
                                         </li>
-                                        <li class="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
-                                            <i class="ph-bold ph-check text-emerald-500"></i>
-                                            <span>Framer & Webflow Support</span>
+                                        <li class="flex items-center gap-4 text-slate-600 dark:text-slate-300">
+                                            <i class="ph-bold ph-check text-emerald-500 text-lg"></i>
+                                            <span class="font-medium">Webflow & Framer</span>
                                         </li>
-                                        <li class="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
-                                            <i class="ph-bold ph-check text-emerald-500"></i>
-                                            <span>Clean Code (No Watermarks)</span>
+                                        <li class="flex items-center gap-4 text-slate-600 dark:text-slate-300">
+                                            <i class="ph-bold ph-check text-emerald-500 text-lg"></i>
+                                            <span class="font-medium">Zero Badges/Watermarks</span>
                                         </li>
-                                        <li class="flex items-center gap-3 text-sm text-slate-400">
-                                            <i class="ph-bold ph-x text-red-400 opacity-50"></i>
-                                            <span class="line-through">Wix Support</span>
+                                        <li class="flex items-center gap-4 text-slate-400 opacity-60 italic">
+                                            <i class="ph ph-lock text-sm"></i>
+                                            <span>Full Website ZIPs Locked</span>
                                         </li>
                                     </ul>
-                                    <button @click="pricingOpen = false" class="w-full py-4 px-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group-hover:bg-primary-600 group-hover:text-white group-hover:border-primary-600">Choose Starter</button>
+                                    <button @click="pricingOpen = false" class="w-full py-5 px-6 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl font-black transition-all hover:bg-primary-600 hover:text-white hover:border-primary-600">Activate Starter</button>
                                 </div>
 
-                                <!-- Professional Plan (Featured) -->
-                                <div class="p-8 rounded-[2rem] bg-white dark:bg-slate-900 border-2 border-primary-600 shadow-premium relative flex flex-col transform md:scale-105 z-10 transition-transform">
-                                    <div class="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-primary-600 text-white text-[10px] font-bold uppercase tracking-widest rounded-full shadow-glow whitespace-nowrap">Recommended</div>
-                                    <div class="mb-6">
-                                        <div class="text-primary-600 font-bold text-[10px] uppercase tracking-widest mb-2">Professional</div>
-                                        <div class="flex items-baseline gap-1">
-                                            <span class="text-4xl font-display font-bold">$5</span>
-                                            <span class="text-slate-500 text-sm">/monthly</span>
+                                <!-- Professional Plan ($5 Refined) -->
+                                <div class="p-10 rounded-[3rem] bg-white dark:bg-slate-900 border-4 border-primary-600 shadow-premium relative flex flex-col transform md:scale-110 z-10 transition-all ring-12 ring-primary-500/5">
+                                    <div class="absolute -top-6 left-1/2 -translate-x-1/2 px-6 py-2 bg-primary-600 text-white text-[11px] font-black uppercase tracking-widest rounded-full shadow-glow whitespace-nowrap">BEST VALUE</div>
+                                    <div class="mb-8">
+                                        <div class="text-primary-600 font-black text-xs uppercase tracking-widest mb-3">Professional</div>
+                                        <div class="flex items-baseline gap-2">
+                                            <span class="text-5xl font-display font-black">$5</span>
+                                            <span class="text-slate-500 text-sm">/mo</span>
                                         </div>
                                     </div>
-                                    <ul class="space-y-4 mb-10 flex-1">
-                                        <li class="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
-                                            <i class="ph-bold ph-check text-emerald-500"></i>
-                                            <span>Unlimited Single Pages</span>
+                                    <ul class="space-y-5 mb-12 flex-1">
+                                        <li class="flex items-center gap-4 text-slate-900 dark:text-white">
+                                            <i class="ph-bold ph-check text-emerald-500 text-xl"></i>
+                                            <span class="font-bold">15 Full Website Exports /mo</span>
                                         </li>
-                                        <li class="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
-                                            <i class="ph-bold ph-check text-emerald-500"></i>
-                                            <span>Wix Support Included</span>
+                                        <li class="flex items-center gap-4 text-slate-900 dark:text-white">
+                                            <i class="ph-bold ph-check text-emerald-500 text-xl"></i>
+                                            <span class="font-bold">Unlimited Single Page Exports</span>
                                         </li>
-                                        <li class="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
-                                            <i class="ph-bold ph-check text-emerald-500"></i>
-                                            <span>3 Full Site (ZIP) Exports /mo</span>
+                                        <li class="flex items-center gap-4 text-slate-900 dark:text-white">
+                                            <i class="ph-bold ph-check text-emerald-500 text-xl"></i>
+                                            <span class="font-bold">Wix Full Engine Support</span>
                                         </li>
-                                        <li class="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+                                        <li class="flex items-center gap-4 text-slate-900 dark:text-white">
+                                            <i class="ph-bold ph-check text-emerald-500 text-xl"></i>
+                                            <span class="font-bold">Priority Cloud Processing</span>
+                                        </li>
+                                        <li class="flex items-center gap-4 text-slate-900 dark:text-white text-xs opacity-75">
                                             <i class="ph-bold ph-check text-emerald-500"></i>
-                                            <span>Priority Email Support</span>
+                                            <span>Includes all platform features</span>
                                         </li>
                                     </ul>
-                                    <button @click="pricingOpen = false" class="w-full py-4 px-6 bg-primary-600 text-white rounded-2xl font-bold text-sm shadow-glow hover:bg-primary-700 transition-colors">Go Professional</button>
+                                    <button @click="pricingOpen = false" class="w-full py-5 px-6 bg-primary-600 text-white rounded-2xl font-black text-lg shadow-glow hover:bg-primary-500 transition-transform active:scale-95">Upgrade to Professional</button>
                                 </div>
 
-                                <!-- Agency Plan -->
-                                <div class="p-8 rounded-[2rem] bg-slate-900 dark:bg-slate-800 border border-slate-800 dark:border-slate-700 flex flex-col text-white group transition-all">
-                                    <div class="mb-6">
-                                        <div class="text-primary-400 font-bold text-[10px] uppercase tracking-widest mb-2">Agency</div>
-                                        <div class="flex items-baseline gap-1">
-                                            <span class="text-4xl font-display font-bold">$15</span>
-                                            <span class="text-slate-400 text-sm">/monthly</span>
+                                <!-- Agency Plan ($15 Refined) -->
+                                <div class="p-10 rounded-[3rem] bg-slate-950 border border-slate-800 flex flex-col text-white group relative">
+                                    <div class="mb-8">
+                                        <div class="text-indigo-400 font-black text-xs uppercase tracking-widest mb-3">Agency</div>
+                                        <div class="flex items-baseline gap-2">
+                                            <span class="text-5xl font-display font-black">$15</span>
+                                            <span class="text-slate-500 text-sm">/mo</span>
                                         </div>
                                     </div>
-                                    <ul class="space-y-4 mb-10 flex-1">
-                                        <li class="flex items-center gap-3 text-sm text-slate-300">
-                                            <i class="ph-bold ph-check text-primary-400"></i>
-                                            <span>Unlimited ZIP Site Exports</span>
+                                    <ul class="space-y-5 mb-12 flex-1">
+                                        <li class="flex items-center gap-4 text-slate-200">
+                                            <i class="ph-bold ph-check text-indigo-400 text-xl"></i>
+                                            <span class="font-bold">30 Full Website Exports /mo</span>
                                         </li>
-                                        <li class="flex items-center gap-3 text-sm text-slate-300">
-                                            <i class="ph-bold ph-check text-primary-400"></i>
-                                            <span>Bulk Website Crawler</span>
+                                        <li class="flex items-center gap-4 text-slate-200">
+                                            <i class="ph-bold ph-check text-indigo-400 text-xl"></i>
+                                            <span class="font-bold">Unlimited Everything Else</span>
                                         </li>
-                                        <li class="flex items-center gap-3 text-sm text-slate-300">
-                                            <i class="ph-bold ph-check text-primary-400"></i>
-                                            <span>White-labeled Code Export</span>
+                                        <li class="flex items-center gap-4 text-slate-200">
+                                            <i class="ph-bold ph-check text-indigo-400 text-xl"></i>
+                                            <span class="font-bold">White-label Export System</span>
                                         </li>
-                                        <li class="flex items-center gap-3 text-sm text-slate-300">
-                                            <i class="ph-bold ph-check text-primary-400"></i>
-                                            <span>Custom SEO Injector Tool</span>
+                                        <li class="flex items-center gap-4 text-slate-200">
+                                            <i class="ph-bold ph-check text-indigo-400 text-xl"></i>
+                                            <span class="font-bold">Custom SEO Header Injection</span>
+                                        </li>
+                                        <li class="flex items-center gap-4 text-slate-400">
+                                            <i class="ph-bold ph-check text-indigo-400"></i>
+                                            <span>24/7 Dedicated Developer Chat</span>
                                         </li>
                                     </ul>
-                                    <button @click="pricingOpen = false" class="w-full py-4 px-6 bg-primary-600 text-white rounded-2xl font-bold text-sm shadow-glow hover:bg-primary-700 transition-colors">Start Agency Plan</button>
+                                    <button @click="pricingOpen = false" class="w-full py-5 px-6 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-glow hover:bg-indigo-500 transition-all">Select Agency Plan</button>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Modal Footer -->
-                        <div class="p-6 text-center border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
-                            <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Secure Payments via Stripe or PayPal</p>
+                        <div class="p-8 text-center border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50">
+                            <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400">Stripe Secure Payments — Ready for production</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Features Grid -->
-                <section class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
-                    <div class="glass-panel p-6 rounded-3xl border border-slate-100 dark:border-slate-800 hover:border-primary-500/30 transition-colors">
-                        <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 mb-4">
-                            <i class="ph ph-magic-wand text-2xl"></i>
+                <!-- Detailed Features -->
+                <section class="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8">
+                    <div class="glass-panel p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 hover:border-primary-500/50 transition-all transition-colors duration-500 group">
+                        <div class="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 mb-6 group-hover:scale-110 transition-transform">
+                            <i class="ph ph-drop text-3xl"></i>
                         </div>
-                        <h4 class="font-bold text-lg mb-2">Webflow Export</h4>
-                        <p class="text-sm text-slate-500 leading-relaxed">Extract clean code from Webflow. Our engine automatically removes badges and converts assets for standalone hosting.</p>
+                        <h4 class="font-display font-bold text-xl mb-3">Clean Webflow Code</h4>
+                        <p class="text-slate-500 dark:text-slate-400 leading-relaxed">Extract clean, semantic code from Webflow. Our engine automatically removes badges and converts assets for self-hosting.</p>
                     </div>
-                    <div class="glass-panel p-6 rounded-3xl border border-slate-100 dark:border-slate-800 hover:border-primary-500/30 transition-colors">
-                        <div class="w-12 h-12 rounded-2xl bg-fuchsia-500/10 flex items-center justify-center text-fuchsia-500 mb-4">
-                            <i class="ph ph-framer-logo text-2xl"></i>
+                    <div class="glass-panel p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 hover:border-primary-500/50 transition-all transition-colors duration-500 group">
+                        <div class="w-14 h-14 rounded-2xl bg-fuchsia-500/10 flex items-center justify-center text-fuchsia-500 mb-6 group-hover:scale-110 transition-transform">
+                            <i class="ph ph-framer-logo text-3xl"></i>
                         </div>
-                        <h4 class="font-bold text-lg mb-2">Framer Export</h4>
-                        <p class="text-sm text-slate-500 leading-relaxed">The only tool that reliably exports Framer sites. Perfect for transitioning from prototype to permanent hosting.</p>
+                        <h4 class="font-display font-bold text-xl mb-3">Framer Export Pro</h4>
+                        <p class="text-slate-500 dark:text-slate-400 leading-relaxed">The world's most reliable Framer exporter. Perfectly preserve animations, styles, and interactions for permanent hosting.</p>
                     </div>
-                    <div class="glass-panel p-6 rounded-3xl border border-slate-100 dark:border-slate-800 hover:border-primary-500/30 transition-colors">
-                        <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-4">
-                            <i class="ph ph-globe text-2xl"></i>
+                    <div class="glass-panel p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 hover:border-primary-500/50 transition-all transition-colors duration-500 group">
+                        <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-6 group-hover:scale-110 transition-transform">
+                            <i class="ph ph-globe text-3xl"></i>
                         </div>
-                        <h4 class="font-bold text-lg mb-2">Wix Export</h4>
-                        <p class="text-sm text-slate-500 leading-relaxed">Break free from Wix subscriptions. Export your Wix site and host it anywhere for a fraction of the cost.</p>
+                        <h4 class="font-display font-bold text-xl mb-3">Host Wix Anywhere</h4>
+                        <p class="text-slate-500 dark:text-slate-400 leading-relaxed">Break free from Wix platform lock-in. Export your site source code and host it on your own server for total control.</p>
                     </div>
                 </section>
 
-                <footer class="text-center pt-8 border-t border-slate-200 dark:border-slate-800 text-slate-400 text-sm pb-12">
-                    <div class="flex justify-center gap-6 mb-4">
-                        <a href="#" class="hover:text-primary-500 transition-colors">Privacy</a>
-                        <a href="#" class="hover:text-primary-500 transition-colors">Terms</a>
-                        <a href="#" class="hover:text-primary-500 transition-colors" @click.prevent="pricingOpen = true">Pricing</a>
+                <footer class="text-center pt-12 border-t border-slate-200 dark:border-slate-800 text-slate-400 text-sm pb-16">
+                    <div class="flex justify-center gap-10 mb-6">
+                        <a href="#" class="hover:text-primary-500 font-bold transition-colors">Privacy Policy</a>
+                        <a href="#" class="hover:text-primary-500 font-bold transition-colors">Terms of Service</a>
+                        <a href="#" @click.prevent="pricingOpen = true" class="text-primary-600 dark:text-primary-400 font-black hover:underline">View Pricing</a>
                     </div>
-                    <p>&copy; 2026 FreeHTML.pro. Award-winning export technology for designers.</p>
+                    <p class="font-medium">&copy; 2026 FreeHTML.pro — Built for the Next Generation of Web Design.</p>
                 </footer>
             </div>
         </main>
