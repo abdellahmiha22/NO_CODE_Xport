@@ -69,9 +69,15 @@
                 url: '',
                 isLoading: false,
                 error: null,
+                platform: 'framer', // default
                 
                 setMode(newMode) {
                     this.mode = newMode;
+                    this.sidebarOpen = false;
+                },
+                setPlatform(p) {
+                    this.platform = p;
+                    this.mode = 'single';
                     this.sidebarOpen = false;
                 },
                 async exportSite() {
@@ -184,7 +190,7 @@
                 <h3 class="px-3 mb-3 text-xs font-bold uppercase tracking-wider text-neuro-500">Export Tools</h3>
                 <ul class="space-y-1">
                     <li>
-                        <a href="#" @click.prevent="setMode('single')" :class="mode === 'single' ? 'active' : ''" class="nav-link">
+                        <a href="#" @click.prevent="setPlatform('framer')" :class="platform === 'framer' && mode === 'single' ? 'active' : ''" class="nav-link">
                             <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-brand-500 to-brand-600 shadow-sm">
                                 <i class="ph-fill ph-framer-logo text-lg"></i>
                             </div>
@@ -192,7 +198,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="#" @click.prevent="setMode('single')" :class="mode === 'single' ? 'active' : ''" class="nav-link">
+                        <a href="#" @click.prevent="setPlatform('webflow')" :class="platform === 'webflow' && mode === 'single' ? 'active' : ''" class="nav-link">
                             <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-accent-500 to-accent-600 shadow-sm">
                                 <i class="ph-fill ph-drop text-lg"></i>
                             </div>
@@ -200,7 +206,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="#" @click.prevent="setMode('single')" :class="mode === 'single' ? 'active' : ''" class="nav-link">
+                        <a href="#" @click.prevent="setPlatform('wix')" :class="platform === 'wix' && mode === 'single' ? 'active' : ''" class="nav-link">
                             <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-success-500 to-success-600 shadow-sm">
                                 <i class="ph-fill ph-globe text-lg"></i>
                             </div>
@@ -208,7 +214,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="#" @click.prevent="setMode('single')" :class="mode === 'single' ? 'active' : ''" class="nav-link">
+                        <a href="#" @click.prevent="setPlatform('wordpress')" :class="platform === 'wordpress' && mode === 'single' ? 'active' : ''" class="nav-link">
                             <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-warning-500 to-warning-600 shadow-sm">
                                 <i class="ph-bold ph-wordpress-logo text-lg"></i>
                             </div>
@@ -216,7 +222,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="#" class="nav-link">
+                        <a href="#" @click.prevent="setPlatform('other')" :class="platform === 'other' && mode === 'single' ? 'active' : ''" class="nav-link">
                             <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-brand-600 to-accent-600 shadow-sm">
                                 <i class="ph-bold ph-squares-four text-lg"></i>
                             </div>
