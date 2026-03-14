@@ -3,78 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NoCodeXport - Export your Webflow and Framer Website for Free (Clone)</title>
+    
+    <!-- SEO Meta Tags -->
+    <title>NoCodeXport | #1 Webflow to HTML & Framer to HTML Converter</title>
+    <meta name="description" content="Convert Webflow to HTML, Framer to HTML, and Wix to HTML instantly for free. The most powerful website exporter with automatic watermark removal and clean, production-ready code.">
+    <meta name="keywords" content="webflow to html, framer to html, wix to html, export webflow to html free, download framer site, website exporter, nocode to html, export framer to code, wix website downloader">
+    <meta name="author" content="NoCodeXport">
+    <link rel="canonical" href="https://nocodexport.com">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://nocodexport.com/">
+    <meta property="og:title" content="NoCodeXport | Export Webflow & Framer to HTML Instantly">
+    <meta property="og:description" content="Instant no-code website export. Clean HTML/CSS/JS with one click. Support for Webflow, Framer, and Wix.">
+    <meta property="og:image" content="/favicon.png">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://nocodexport.com/">
+    <meta property="twitter:title" content="NoCodeXport | Convert No-Code to Code">
+    <meta property="twitter:description" content="Clean HTML export from Webflow, Framer, and Wix. Save thousands on hosting fees.">
+
     <link rel="icon" type="image/png" href="/favicon.png">
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        neuro: {
-                            50: '#f8fafc',
-                            100: '#f1f5f9',
-                            200: '#e2e8f0',
-                            300: '#cbd5e1',
-                            500: '#64748b',
-                            600: '#475569',
-                            700: '#334155',
-                            900: '#0f172a',
-                            950: '#020617',
-                        },
-                        brand: {
-                            500: '#6366f1',
-                            600: '#4f46e5',
-                            700: '#4338ca',
-                        },
-                        accent: {
+                        primary: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            200: '#ddd6fe',
+                            300: '#c4b5fd',
+                            400: '#a78bfa',
                             500: '#8b5cf6',
                             600: '#7c3aed',
+                            700: '#6d28d9',
+                            800: '#5b21b6',
+                            900: '#4c1d95',
+                            950: '#2e1065',
                         },
-                        success: {
-                            500: '#10b981',
-                            600: '#059669',
-                        },
-                        warning: {
-                            500: '#f59e0b',
-                            600: '#d97706',
-                        },
-                        info: {
-                            500: '#3b82f6',
-                            600: '#2563eb',
+                        slate: {
+                            950: '#020617',
                         }
                     },
                     fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Outfit', 'Inter', 'sans-serif'],
                     },
                     boxShadow: {
-                        'primary': '0 4px 14px 0 rgba(99, 102, 241, 0.39)',
-                        'neuro-lg': '4px 0 24px rgba(0,0,0,0.02)',
+                        'glow': '0 0 20px -5px rgba(139, 92, 246, 0.5)',
+                        'premium': '0 10px 40px -10px rgba(0, 0, 0, 0.1)',
                     }
                 }
             }
         }
     </script>
+
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Alpine.js for interactivity -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Interactivity -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <!-- Phosphor Icons (for the UI vectors) -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <style>
+        [x-cloak] { display: none !important; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .dark .glass-panel {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .animate-float { animation: float 6s ease-in-out infinite; }
+    </style>
+
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.data('exportApp', () => ({
-                sidebarOpen: false, 
+                sidebarOpen: false,
+                darkMode: false,
                 mode: 'single',
                 url: '',
                 isLoading: false,
                 error: null,
-                platform: 'framer', // default
+                platform: 'framer',
+                success: false,
                 
-                setMode(newMode) {
-                    this.mode = newMode;
-                    this.sidebarOpen = false;
+                init() {
+                    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                        this.darkMode = true;
+                    }
                 },
                 setPlatform(p) {
                     this.platform = p;
@@ -83,11 +122,12 @@
                 },
                 async exportSite() {
                     if (!this.url) {
-                        this.error = "Please enter a valid URL.";
+                        this.error = "Please enter a valid website URL.";
                         return;
                     }
                     this.error = null;
                     this.isLoading = true;
+                    this.success = false;
 
                     try {
                         const endpoint = this.mode === 'single' ? '/api/export/single' : '/api/export/zip';
@@ -98,31 +138,15 @@
                         });
 
                         if (!response.ok) {
-                            let errMessage = 'Export failed';
-                            try {
-                                const errData = await response.json();
-                                errMessage = errData.error || errMessage;
-                            } catch (e) {
-                                errMessage = `Error ${response.status}: Failed to reach or parse server response.`;
-                            }
-                            throw new Error(errMessage);
+                            let msg = 'Export failed';
+                            try { const d = await response.json(); msg = d.error || msg; } catch(e) {}
+                            throw new Error(msg);
                         }
 
-                        // Trigger download of the HTML file
                         const blob = await response.blob();
                         const downloadUrl = window.URL.createObjectURL(blob);
-                        
-                        // Extract filename from Content-Disposition if available
                         let filename = this.mode === 'zip' ? 'export.zip' : 'export.html';
-                        const disposition = response.headers.get('content-disposition');
-                        if (disposition && disposition.indexOf('filename=') !== -1) {
-                            const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-                            const matches = filenameRegex.exec(disposition);
-                            if (matches != null && matches[1]) { 
-                                filename = matches[1].replace(/['"]/g, '');
-                            }
-                        }
-
+                        
                         const a = document.createElement('a');
                         a.href = downloadUrl;
                         a.download = filename;
@@ -130,6 +154,9 @@
                         a.click();
                         a.remove();
                         window.URL.revokeObjectURL(downloadUrl);
+                        
+                        this.success = true;
+                        setTimeout(() => { this.success = false; }, 5000);
 
                     } catch (err) {
                         this.error = err.message;
@@ -140,263 +167,298 @@
             }))
         })
     </script>
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        .nav-link {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 8px 12px;
-            border-radius: 12px;
-            color: #334155;
-            font-weight: 500;
-            transition: all 0.2s ease;
-        }
-        .nav-link:hover {
-            background-color: #f1f5f9;
-            color: #0f172a;
-        }
-        .nav-link.active {
-            background-color: #eef2ff;
-            color: #4f46e5;
-        }
-    </style>
 </head>
-<body class="bg-neuro-100 text-neuro-900 overflow-x-hidden antialiased flex" x-data="exportApp">
+<body 
+    class="bg-[#f8fafc] text-slate-900 transition-colors duration-300 font-sans antialiased"
+    :class="{ 'dark bg-slate-950 text-white': darkMode }"
+    x-data="exportApp"
+>
+    <!-- Background Elements -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+        <div class="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-primary-500/10 blur-[120px] rounded-full animate-float"></div>
+        <div class="absolute top-[40%] -right-[10%] w-[50%] h-[50%] bg-purple-500/10 blur-[150px] rounded-full animate-float" style="animation-delay: -2s"></div>
+    </div>
 
-    <!-- Mobile Header Toggle -->
-    <button @click="sidebarOpen = true" class="lg:hidden fixed top-4 left-4 z-50 w-12 h-12 bg-white hover:bg-neuro-50 text-neuro-900 border border-neuro-200 rounded-xl shadow-sm flex items-center justify-center transition-all duration-300">
-        <i class="ph ph-list text-2xl"></i>
-    </button>
-
-    <!-- Sidebar Overlay -->
-    <div x-show="sidebarOpen" x-transition.opacity @click="sidebarOpen = false" class="fixed inset-0 bg-neuro-900/50 z-[60] lg:hidden"></div>
-
-    <!-- Sidebar -->
-    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed top-0 left-0 z-[70] h-screen w-[280px] bg-white border-r border-neuro-200 shadow-neuro-lg flex flex-col transition-transform duration-300 lg:translate-x-0">
-        <div class="flex items-center justify-between px-6 py-6 border-b border-neuro-100">
-            <a href="#" class="flex items-center gap-3 group">
-                <div class="w-10 h-10 rounded-xl overflow-hidden shadow-primary transition-transform duration-300 group-hover:scale-110">
-                    <img src="/favicon.png" alt="NoCodeXport Logo" class="w-full h-full object-cover">
-                </div>
-                <span class="text-xl font-bold tracking-tight text-neuro-950">NoCodeXport</span>
-            </a>
-            <button @click="sidebarOpen = false" class="lg:hidden text-neuro-500 hover:text-neuro-900">
-                <i class="ph ph-x text-xl"></i>
+    <!-- Mobile Header -->
+    <header class="lg:hidden flex items-center justify-between p-4 glass-panel sticky top-0 z-40">
+        <div class="flex items-center gap-2">
+            <img src="/favicon.png" alt="Logo" class="w-8 h-8 rounded-lg shadow-glow">
+            <span class="font-display font-bold text-lg">NoCodeXport</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <button @click="darkMode = !darkMode" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+                <i class="ph" :class="darkMode ? 'ph-sun' : 'ph-moon'"></i>
+            </button>
+            <button @click="sidebarOpen = true" class="p-2 rounded-xl bg-primary-600 text-white shadow-glow">
+                <i class="ph ph-list text-xl"></i>
             </button>
         </div>
+    </header>
 
-        <nav class="flex-1 overflow-y-auto px-4 py-6">
-            <div class="mb-8">
-                <h3 class="px-3 mb-3 text-xs font-bold uppercase tracking-wider text-neuro-500">Export Tools</h3>
-                <ul class="space-y-1">
-                    <li>
-                        <a href="#" @click.prevent="setPlatform('framer')" :class="platform === 'framer' && mode === 'single' ? 'active' : ''" class="nav-link">
-                            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-brand-500 to-brand-600 shadow-sm">
-                                <i class="ph-fill ph-framer-logo text-lg"></i>
-                            </div>
-                            <span class="flex-1">Framer</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#" @click.prevent="setPlatform('webflow')" :class="platform === 'webflow' && mode === 'single' ? 'active' : ''" class="nav-link">
-                            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-accent-500 to-accent-600 shadow-sm">
-                                <i class="ph-fill ph-drop text-lg"></i>
-                            </div>
-                            <span class="flex-1">Webflow</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#" @click.prevent="setPlatform('wix')" :class="platform === 'wix' && mode === 'single' ? 'active' : ''" class="nav-link">
-                            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-success-500 to-success-600 shadow-sm">
-                                <i class="ph-fill ph-globe text-lg"></i>
-                            </div>
-                            <span class="flex-1">Wix</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#" @click.prevent="setPlatform('wordpress')" :class="platform === 'wordpress' && mode === 'single' ? 'active' : ''" class="nav-link">
-                            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-warning-500 to-warning-600 shadow-sm">
-                                <i class="ph-bold ph-wordpress-logo text-lg"></i>
-                            </div>
-                            <span class="flex-1">WordPress</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#" @click.prevent="setPlatform('other')" :class="platform === 'other' && mode === 'single' ? 'active' : ''" class="nav-link">
-                            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-brand-600 to-accent-600 shadow-sm">
-                                <i class="ph-bold ph-squares-four text-lg"></i>
-                            </div>
-                            <span class="flex-1">More Tools</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#" @click.prevent="setMode('zip')" :class="mode === 'zip' ? 'active' : ''" class="nav-link">
-                            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-info-500 to-info-600 shadow-sm">
-                                <i class="ph-bold ph-file-zip text-lg"></i>
-                            </div>
-                            <span class="flex-1">ZIP Export</span>
-                        </a>
-                    </li>
-                </ul>
-            </div>
-            
-            <div>
-                <h3 class="px-3 mb-3 text-xs font-bold uppercase tracking-wider text-neuro-500">Resources</h3>
-                <ul class="space-y-1">
-                    <li>
-                        <a href="#" class="nav-link text-neuro-600">
-                            <i class="ph ph-info text-xl"></i>
-                            <span>About</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#" class="nav-link text-neuro-600">
-                            <i class="ph ph-users text-xl"></i>
-                            <span>Community</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#" class="nav-link text-neuro-600">
-                            <i class="ph ph-code text-xl"></i>
-                            <span>API</span>
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </nav>
-    </aside>
-
-    <!-- Main Content -->
-    <main class="flex-1 w-full lg:ml-[280px] min-h-screen bg-gradient-to-b from-white via-neuro-50 to-neuro-100 flex items-center justify-center p-4 py-16 lg:px-8">
-        <div class="w-full max-w-2xl relative">
-            
-            <!-- Glow background effect -->
-            <div class="absolute inset-0 -z-10 translate-y-8 bg-brand-500/20 blur-[100px] rounded-full"></div>
-
-            <div class="bg-white p-6 sm:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-neuro-200">
-                <div class="text-center mb-8">
-                    <h1 class="text-3xl sm:text-4xl font-extrabold mb-3 text-neuro-950 tracking-tight">Export Any Site to HTML</h1>
-                    <p class="text-neuro-600 text-lg">Enter your site URL and we'll generate a simple HTML file for you to download.</p>
-                </div>
-
-                <!-- Toggles -->
-                <div class="mb-8">
-                    <div class="flex gap-2 p-1.5 bg-neuro-100 rounded-xl relative">
-                        <button @click="mode = 'single'" 
-                                :class="mode === 'single' ? 'bg-white text-brand-600 shadow-sm ring-1 ring-black/5' : 'text-neuro-600 hover:text-neuro-900'"
-                                class="flex-1 py-3 px-4 rounded-lg text-sm font-semibold transition-all duration-200">
-                            Single Page
-                        </button>
-                        <button @click="mode = 'zip'" 
-                                :class="mode === 'zip' ? 'bg-white text-brand-600 shadow-sm ring-1 ring-black/5' : 'text-neuro-600 hover:text-neuro-900'"
-                                class="flex-1 py-3 px-4 rounded-lg text-sm font-semibold transition-all duration-200">
-                            Full Site ZIP (Pro)
-                        </button>
+    <!-- Sidebar Wrapper -->
+    <div class="flex min-h-screen">
+        
+        <!-- Sidebar -->
+        <aside 
+            class="fixed inset-y-0 left-0 z-50 w-[280px] glass-panel border-r border-slate-200 dark:border-slate-800 transition-transform duration-300 lg:translate-x-0 lg:static"
+            :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+        >
+            <div class="flex flex-col h-full">
+                <!-- Sidebar Header -->
+                <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <img src="/favicon.png" alt="NoCodeXport" class="w-10 h-10 rounded-xl shadow-premium animate-float">
+                        <span class="font-display font-bold text-xl tracking-tight">NoCodeXport</span>
                     </div>
-                    <p class="text-xs text-neuro-500 text-center mt-3 font-medium" x-text="mode === 'single' ? 'Export only the specified page URL' : 'Export entire website as ZIP'"></p>
-                </div>
-
-                <!-- Error area -->
-                <div x-show="error" x-transition class="mb-5 p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-medium flex items-center gap-2">
-                    <i class="ph-fill ph-warning-circle text-lg"></i>
-                    <span x-text="error"></span>
-                </div>
-
-                <!-- Form Area -->
-                <div class="mb-5 relative group">
-                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <i class="ph ph-link text-neuro-400 text-xl group-focus-within:text-brand-500 transition-colors"></i>
-                    </div>
-                    <input type="url" x-model="url" @keydown.enter="exportSite" placeholder="https://yourwebsite.com" class="w-full pl-11 pr-4 py-4 bg-white border border-neuro-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-brand-500/20 focus:border-brand-500 text-neuro-900 placeholder:text-neuro-400 transition-all font-medium text-lg shadow-sm" :disabled="isLoading" />
-                </div>
-                
-                <button @click="exportSite" :disabled="isLoading" class="w-full py-4 px-6 bg-brand-600 hover:bg-brand-700 active:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold text-lg transition-all shadow-primary hover:shadow-lg hover:-translate-y-0.5 flex items-center justify-center gap-2">
-                    <template x-if="isLoading">
-                        <i class="ph-bold ph-spinner animate-spin"></i>
-                    </template>
-                    <template x-if="!isLoading">
-                        <i class="ph-bold ph-download-simple"></i>
-                    </template>
-                    <span x-text="isLoading ? 'Exporting...' : 'Export Now'"></span>
-                </button>
-                
-                <div class="mt-5 text-center">
-                    <button class="text-sm font-medium text-neuro-500 hover:text-brand-600 transition-colors flex items-center justify-center gap-1.5 mx-auto">
-                        <i class="ph ph-chat-circle"></i>
-                        Need help? Chat with support
+                    <button @click="sidebarOpen = false" class="lg:hidden">
+                        <i class="ph ph-x text-xl"></i>
                     </button>
                 </div>
 
-                <!-- Integrations -->
-                <div class="mt-10 pt-8 border-t border-neuro-100">
-                    <p class="text-sm text-neuro-500 text-center mb-6 font-semibold uppercase tracking-wider">Automatic watermark removal for</p>
-                    <div class="flex justify-center gap-4 sm:gap-6 overflow-x-auto px-2 pb-2 hide-scrollbar">
-                        <div class="w-24 h-24 sm:w-32 sm:h-28 bg-white rounded-2xl flex flex-col items-center justify-center border border-neuro-100 shadow-sm hover:shadow-md transition-shadow flex-shrink-0 group">
-                            <i class="ph-fill ph-framer-logo text-4xl text-neuro-400 group-hover:text-black transition-colors mb-2"></i>
-                            <span class="text-xs font-semibold text-neuro-600">Framer</span>
-                        </div>
-                        <div class="w-24 h-24 sm:w-32 sm:h-28 bg-white rounded-2xl flex flex-col items-center justify-center border border-neuro-100 shadow-sm hover:shadow-md transition-shadow flex-shrink-0 group">
-                            <i class="ph-fill ph-drop text-4xl text-neuro-400 group-hover:text-blue-600 transition-colors mb-2"></i>
-                            <span class="text-xs font-semibold text-neuro-600">Webflow</span>
-                        </div>
-                        <div class="w-24 h-24 sm:w-32 sm:h-28 bg-white rounded-2xl flex flex-col items-center justify-center border border-neuro-100 shadow-sm hover:shadow-md transition-shadow flex-shrink-0 group">
-                            <i class="ph-fill ph-globe text-4xl text-neuro-400 group-hover:text-black transition-colors mb-2"></i>
-                            <span class="text-xs font-semibold text-neuro-600">Wix</span>
-                        </div>
+                <!-- Navigation -->
+                <nav class="flex-1 p-4 space-y-8 overflow-y-auto">
+                    <div>
+                        <h3 class="px-3 mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Export Engines</h3>
+                        <ul class="space-y-2">
+                            <li>
+                                <button @click="setPlatform('framer')" :class="platform === 'framer' ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium">
+                                    <i class="ph-fill ph-framer-logo text-xl"></i>
+                                    <span>Framer to HTML</span>
+                                </button>
+                            </li>
+                            <li>
+                                <button @click="setPlatform('webflow')" :class="platform === 'webflow' ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium">
+                                    <i class="ph-fill ph-drop text-xl"></i>
+                                    <span>Webflow to HTML</span>
+                                </button>
+                            </li>
+                            <li>
+                                <button @click="setPlatform('wix')" :class="platform === 'wix' ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium">
+                                    <i class="ph-fill ph-globe text-xl"></i>
+                                    <span>Wix to HTML</span>
+                                </button>
+                            </li>
+                            <li>
+                                <button @click="mode = 'zip'" :class="mode === 'zip' ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium">
+                                    <i class="ph-fill ph-file-zip text-xl"></i>
+                                    <span>Full Site Export</span>
+                                    <span class="ml-auto text-[10px] bg-primary-100 dark:bg-primary-950 text-primary-600 px-1.5 py-0.5 rounded-md">PRO</span>
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="px-3 mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Settings</h3>
+                        <ul class="space-y-2">
+                            <li>
+                                <button @click="darkMode = !darkMode" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-all font-medium">
+                                    <i class="ph text-xl" :class="darkMode ? 'ph-sun' : 'ph-moon'"></i>
+                                    <span x-text="darkMode ? 'Light Mode' : 'Dark Mode'"></span>
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </nav>
+
+                <!-- Sidebar Footer -->
+                <div class="p-6 border-t border-slate-100 dark:border-slate-800">
+                    <div class="bg-primary-600 rounded-2xl p-4 text-white shadow-glow relative overflow-hidden group">
+                        <div class="relative z-10 text-sm font-semibold mb-1">Upgrade to Pro</div>
+                        <div class="relative z-10 text-[11px] opacity-80 mb-3">Unlimited exports & bulk processing.</div>
+                        <button class="relative z-10 w-full bg-white text-primary-600 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 transition-colors">Go Unlimited</button>
+                        <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-white/10 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500"></div>
                     </div>
                 </div>
+            </div>
+        </aside>
 
-                <!-- FAQ Section -->
-                <div class="mt-10 pt-8 border-t border-neuro-100" x-data="{ active: null }">
-                    <h3 class="text-xl font-bold text-neuro-950 text-center mb-6">Frequently Asked Questions</h3>
-                    <div class="space-y-3">
+        <!-- Sidebar Overlay (Mobile) -->
+        <div 
+            x-show="sidebarOpen" 
+            x-transition.opacity 
+            @click="sidebarOpen = false" 
+            class="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-sm lg:hidden"
+        ></div>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-6 lg:p-12">
+            <div class="max-w-4xl mx-auto space-y-12">
+                
+                <!-- Hero Section -->
+                <header class="text-center space-y-6">
+                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500/10 text-primary-600 dark:text-primary-400 text-xs font-bold border border-primary-500/20">
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-primary-500"></span>
+                        </span>
+                        NEW: Improved Wix Export Engine
+                    </div>
+                    <h1 class="text-4xl md:text-6xl font-display font-bold tracking-tight">
+                        Convert <span class="gradient-text">No-Code</span> to <br>Clean Production Code
+                    </h1>
+                    <p class="max-w-2xl mx-auto text-slate-500 dark:text-slate-400 text-lg md:text-xl font-medium">
+                        Instantly export your Webflow, Framer, or Wix website to raw HTML, CSS, and JS. 
+                        No watermarks. No subscriptions. Just clean code.
+                    </p>
+                </header>
+
+                <!-- Export Module -->
+                <section class="glass-panel p-2 rounded-3xl shadow-premium border border-slate-200 dark:border-slate-800 max-w-2xl mx-auto relative group">
+                    <!-- Glow effect on hover -->
+                    <div class="absolute -inset-1 bg-gradient-to-r from-primary-600 to-purple-600 rounded-[28px] opacity-0 group-focus-within:opacity-20 transition-opacity blur-lg -z-10"></div>
+                    
+                    <div class="p-6 md:p-10 space-y-8">
+                        <!-- Mode Tabs -->
+                        <div class="flex p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl">
+                            <button @click="mode = 'single'" :class="mode === 'single' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary-600 dark:text-primary-400' : 'text-slate-500 hover:text-slate-700'" class="flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all">Single Page</button>
+                            <button @click="mode = 'zip'" :class="mode === 'zip' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary-600 dark:text-primary-400' : 'text-slate-500 hover:text-slate-700'" class="flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all">Full Site (ZIP)</button>
+                        </div>
+
+                        <!-- Input Area -->
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-5 flex items-center pointer-events-none">
+                                <i class="ph ph-globe text-2xl text-slate-400" :class="{ 'text-primary-500': url }"></i>
+                            </div>
+                            <input 
+                                type="url" 
+                                x-model="url" 
+                                @keydown.enter="exportSite"
+                                placeholder="https://my-stunning-site.webflow.io" 
+                                class="w-full pl-14 pr-6 py-5 bg-slate-50 dark:bg-slate-900/50 border-2 border-slate-100 dark:border-slate-800 rounded-2xl focus:outline-none focus:border-primary-500 dark:focus:border-primary-500 transition-all font-medium text-lg"
+                                :disabled="isLoading"
+                            >
+                        </div>
+
+                        <!-- Messages -->
+                        <div x-show="error" x-cloak x-transition class="p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 rounded-2xl text-sm font-medium flex items-center gap-3">
+                            <i class="ph-fill ph-warning-circle text-xl"></i>
+                            <span x-text="error"></span>
+                        </div>
                         
+                        <div x-show="success" x-cloak x-transition class="p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400 rounded-2xl text-sm font-medium flex items-center gap-3">
+                            <i class="ph-fill ph-check-circle text-xl"></i>
+                            <span>Success! Your export is ready and downloading.</span>
+                        </div>
+
+                        <!-- Action Button -->
+                        <button 
+                            @click="exportSite" 
+                            :disabled="isLoading" 
+                            class="w-full py-5 px-8 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-2xl font-bold text-lg shadow-glow hover:shadow-primary-500/50 transition-all active:scale-[0.98] flex items-center justify-center gap-3"
+                        >
+                            <template x-if="isLoading">
+                                <i class="ph-bold ph-spinner animate-spin text-2xl"></i>
+                            </template>
+                            <template x-if="!isLoading">
+                                <i class="ph-bold ph-lightning text-2xl"></i>
+                            </template>
+                            <span x-text="isLoading ? 'Crawling Website...' : 'Export to HTML' "></span>
+                        </button>
+
+                        <p class="text-center text-xs text-slate-400 font-medium tracking-wide">
+                            <i class="ph ph-shield-check inline-block mr-1"></i>
+                            Security verified. No login required.
+                        </p>
+                    </div>
+                </section>
+
+                <!-- SEO / Features Section -->
+                <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="glass-panel p-6 rounded-3xl border border-slate-100 dark:border-slate-800 hover:border-primary-500/30 transition-colors">
+                        <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 mb-4">
+                            <i class="ph ph-magic-wand text-2xl"></i>
+                        </div>
+                        <h4 class="font-bold text-lg mb-2">Webflow to HTML</h4>
+                        <p class="text-sm text-slate-500 leading-relaxed">Extract clean code from Webflow. Our engine automatically removes badges and converts assets for standalone hosting.</p>
+                    </div>
+                    <div class="glass-panel p-6 rounded-3xl border border-slate-100 dark:border-slate-800 hover:border-primary-500/30 transition-colors">
+                        <div class="w-12 h-12 rounded-2xl bg-fuchsia-500/10 flex items-center justify-center text-fuchsia-500 mb-4">
+                            <i class="ph ph-framer-logo text-2xl"></i>
+                        </div>
+                        <h4 class="font-bold text-lg mb-2">Framer to HTML</h4>
+                        <p class="text-sm text-slate-500 leading-relaxed">The only tool that reliably exports Framer sites. Perfect for transitioning from prototype to permanent hosting.</p>
+                    </div>
+                    <div class="glass-panel p-6 rounded-3xl border border-slate-100 dark:border-slate-800 hover:border-primary-500/30 transition-colors">
+                        <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-4">
+                            <i class="ph ph-globe text-2xl"></i>
+                        </div>
+                        <h4 class="font-bold text-lg mb-2">Wix to HTML</h4>
+                        <p class="text-sm text-slate-500 leading-relaxed">Break free from Wix subscriptions. Export your Wix site and host it anywhere for a fraction of the cost.</p>
+                    </div>
+                </section>
+
+                <!-- FAQ Section (SEO Optimized) -->
+                <section class="space-y-8 py-12" x-data="{ active: 1 }">
+                    <div class="text-center space-y-4">
+                        <h2 class="text-3xl font-display font-bold">Frequently Asked Questions</h2>
+                        <p class="text-slate-500">Everything you need to know about exporting your no-code site.</p>
+                    </div>
+
+                    <div class="max-w-2xl mx-auto space-y-4">
                         <!-- FAQ 1 -->
-                        <div class="border border-neuro-200 rounded-xl overflow-hidden bg-neuro-50 hover:bg-white transition-colors">
-                            <button @click="active = active === 1 ? null : 1" class="w-full flex items-center justify-between p-5 text-left focus:outline-none">
-                                <span class="font-semibold text-neuro-900">Do I have the right to export my site?</span>
-                                <i class="ph ph-caret-down text-neuro-500 transition-transform duration-300" :class="active === 1 ? 'rotate-180' : ''"></i>
+                        <div class="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                            <button @click="active = active === 1 ? null : 1" class="w-full flex items-center justify-between p-5 text-left bg-white dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                                <span class="font-bold">How do I export Webflow to HTML for free?</span>
+                                <i class="ph ph-caret-down transition-transform" :class="active === 1 ? 'rotate-180' : ''"></i>
                             </button>
-                            <div x-show="active === 1" x-collapse>
-                                <div class="px-5 pb-5 text-neuro-600 text-sm leading-relaxed">
-                                    Yes, you own your site's content and design. Our tool simply retrieves the HTML, CSS, and JS files from the public frontend URLs, helping you secure a backup or switch hosts easily.
+                            <div x-show="active === 1" x-cloak x-collapse class="">
+                                <div class="p-5 text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-transparent leading-relaxed border-t border-slate-100 dark:border-slate-800">
+                                    To export Webflow to HTML, simply copy your Webflow staging URL (e.g., mysite.webflow.io) and paste it into our search bar. Click "Export Now" and our engine will crawl the site, remove the Webflow watermark, and provide a download link for your clean HTML files.
                                 </div>
                             </div>
                         </div>
 
                         <!-- FAQ 2 -->
-                        <div class="border border-neuro-200 rounded-xl overflow-hidden bg-neuro-50 hover:bg-white transition-colors">
-                            <button @click="active = active === 2 ? null : 2" class="w-full flex items-center justify-between p-5 text-left focus:outline-none">
-                                <span class="font-semibold text-neuro-900">How much money have users saved?</span>
-                                <i class="ph ph-caret-down text-neuro-500 transition-transform duration-300" :class="active === 2 ? 'rotate-180' : ''"></i>
+                        <div class="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                            <button @click="active = active === 2 ? null : 2" class="w-full flex items-center justify-between p-5 text-left bg-white dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                                <span class="font-bold">Can I export Framer to HTML and host it elsewhere?</span>
+                                <i class="ph ph-caret-down transition-transform" :class="active === 2 ? 'rotate-180' : ''"></i>
                             </button>
-                            <div x-show="active === 2" x-collapse>
-                                <div class="px-5 pb-5 text-neuro-600 text-sm leading-relaxed">
-                                    Our users save hundreds to thousands of dollars annually by moving to more affordable hosting solutions, completely eliminating restrictive subscription limits of standard page builders.
+                            <div x-show="active === 2" x-cloak x-collapse class="">
+                                <div class="p-5 text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-transparent leading-relaxed border-t border-slate-100 dark:border-slate-800">
+                                    Yes! Framer doesn't natively support free exporting, but NoCodeXport allows you to download your Framer project as raw HTML. This enables you to host your site on Vercel, Netlify, or any static hosting provider, potentially saving you over $200 per year on Framer's hosting plans.
                                 </div>
                             </div>
                         </div>
 
                         <!-- FAQ 3 -->
-                        <div class="border border-neuro-200 rounded-xl overflow-hidden bg-neuro-50 hover:bg-white transition-colors">
-                            <button @click="active = active === 3 ? null : 3" class="w-full flex items-center justify-between p-5 text-left focus:outline-none">
-                                <span class="font-semibold text-neuro-900">Does it export CMS content?</span>
-                                <i class="ph ph-caret-down text-neuro-500 transition-transform duration-300" :class="active === 3 ? 'rotate-180' : ''"></i>
+                        <div class="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                            <button @click="active = active === 3 ? null : 3" class="w-full flex items-center justify-between p-5 text-left bg-white dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                                <span class="font-bold">Does NoCodeXport remove Wix ads and watermarks?</span>
+                                <i class="ph ph-caret-down transition-transform" :class="active === 3 ? 'rotate-180' : ''"></i>
                             </button>
-                            <div x-show="active === 3" x-collapse>
-                                <div class="px-5 pb-5 text-neuro-600 text-sm leading-relaxed">
-                                    Yes, our "Full Site ZIP" method can crawl available internal links, downloading dynamic CMS pages as standalone HTML files, ensuring your complete site is preserved perfectly.
+                            <div x-show="active === 3" x-cloak x-collapse class="">
+                                <div class="p-5 text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-transparent leading-relaxed border-t border-slate-100 dark:border-slate-800">
+                                    Our advanced Wix to HTML converter identifies Wix-specific ad scripts and CSS banners. It strips them during the export process, providing you with a clean, professional version of your site that's ready for any host without the restrictive Wix ads.
                                 </div>
                             </div>
                         </div>
-
                     </div>
-                </div>
+                </section>
 
+                <footer class="text-center pt-8 border-t border-slate-200 dark:border-slate-800 text-slate-400 text-sm pb-12">
+                    <p>&copy; 2026 NoCodeXport. All rights reserved. Built for creators.</p>
+                </footer>
             </div>
-        </div>
-    </main>
+        </main>
+    </div>
 
+    <!-- Structured Data for SEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "NoCodeXport",
+      "operatingSystem": "Web",
+      "applicationCategory": "DeveloperApplication",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "description": "Convert Webflow to HTML, Framer to HTML and Wix to HTML instantly."
+    }
+    </script>
 </body>
 </html>
