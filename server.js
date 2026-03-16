@@ -260,6 +260,7 @@ app.post('/api/export/zip', async (req, res) => {
     }
 });
 
+const puppeteerCore = require('puppeteer-core');
 const puppeteer = require('puppeteer');
 
 // Figma / PDF Export ENDPOINT
@@ -275,10 +276,25 @@ app.post('/api/export/figma', async (req, res) => {
         const parsedUrl = new URL(targetUrl);
         const hostname = parsedUrl.hostname.replace('www.', '');
 
-        const browser = await puppeteer.launch({ 
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox'] 
-        });
+        let browser;
+        // If we are on Vercel or AWS, we use sparticuz to load a serverless friendly chromium
+        if (process.env.VERCEL || process.env.AWS_REGION || process.env.AWS_EXECUTION_ENV) {
+            const chromium = require('@sparticuz/chromium');
+            browser = await puppeteerCore.launch({
+                args: chromium.args,
+                defaultViewport: chromium.defaultViewport,
+                executablePath: await chromium.executablePath(),
+                headless: chromium.headless,
+                ignoreHTTPSErrors: true,
+            });
+        } else {
+            // Local fallback uses standard puppeteer
+            browser = await puppeteer.launch({ 
+                headless: 'new',
+                args: ['--no-sandbox', '--disable-setuid-sandbox'] 
+            });
+        }
+
         const page = await browser.newPage();
         
         // Emulate desktop

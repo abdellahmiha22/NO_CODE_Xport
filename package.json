@@ -16,6 +16,9 @@
     "cheerio": "^1.2.0",
     "cors": "^2.8.6",
     "express": "^5.2.1",
-    "queue": "^7.0.0"
+    "queue": "^7.0.0",
+    "puppeteer": "^22.6.0",
+    "puppeteer-core": "^22.6.0",
+    "@sparticuz/chromium": "^123.0.0"
   }
 }
