@@ -318,23 +318,29 @@ app.post('/api/export/figma', async (req, res) => {
             document.head.appendChild(style);
         });
 
-        // Get total page height
-        const height = await page.evaluate(() => document.documentElement.scrollHeight);
+        // Use the html-to-figma library rather than PDF to create editable JSON
+        // Wait a little extra to ensure any final animations/fonts are settled
+        await new Promise(r => setTimeout(r, 1500));
+        
+        // Inject html-to-figma script from CDN
+        await page.addScriptTag({ url: 'https://cdn.jsdelivr.net/npm/@builder.io/html-to-figma@0.0.3/dist/browser.js' });
 
-        // Generate PDF
-        // Note: page.pdf generates a PDF which is easily imported into Figma keeping vectors/fonts nicely formatted
-        const pdfBuffer = await page.pdf({
-            printBackground: true,
-            width: '1440px',
-            height: height + 'px',
-            pageRanges: '1'
+        // Execute parsing to get standard Figma layers
+        const figmaData = await page.evaluate(() => {
+            if (typeof window.htmlToFigma !== 'undefined' && typeof window.htmlToFigma.htmlToFigma === 'function') {
+                const layers = window.htmlToFigma.htmlToFigma('body', true, false);
+                return { layers };
+            } else {
+                throw new Error("htmlToFigma parser did not load correctly.");
+            }
         });
 
         await browser.close();
 
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="${hostname}-design.pdf"`);
-        return res.send(pdfBuffer);
+        // Send perfectly structured figma JSON!
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename="${hostname}-design.figma.json"`);
+        return res.json(figmaData);
 
     } catch (err) {
         console.error("Figma Export Error:", err.message);
