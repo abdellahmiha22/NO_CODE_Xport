@@ -17,11 +17,11 @@
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "queue": "^7.0.0",
-    "puppeteer": "^24.2.0",
-    "puppeteer-core": "^24.2.0",
-    "@sparticuz/chromium-min": "^131.0.1"
+    "puppeteer": "24.23.1",
+    "puppeteer-core": "24.23.1",
+    "@sparticuz/chromium": "143.0.4"
   },
   "engines": {
-    "node": "18.x"
+    "node": "20.x"
   }
 }
