@@ -260,6 +260,72 @@ app.post('/api/export/zip', async (req, res) => {
     }
 });
 
+const puppeteer = require('puppeteer');
+
+// Figma / PDF Export ENDPOINT
+app.post('/api/export/figma', async (req, res) => {
+    try {
+        let { targetUrl } = req.body;
+        if (!targetUrl) return res.status(400).json({ error: 'URL is required' });
+
+        if (!targetUrl.startsWith('http')) {
+            targetUrl = 'https://' + targetUrl;
+        }
+        
+        const parsedUrl = new URL(targetUrl);
+        const hostname = parsedUrl.hostname.replace('www.', '');
+
+        const browser = await puppeteer.launch({ 
+            headless: 'new',
+            args: ['--no-sandbox', '--disable-setuid-sandbox'] 
+        });
+        const page = await browser.newPage();
+        
+        // Emulate desktop
+        await page.setViewport({ width: 1440, height: 900 });
+        
+        // Wait until there are no more than 2 network connections for at least 500 ms
+        await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+        
+        // Hide watermarks before generating the layout
+        await page.evaluate(() => {
+            const style = document.createElement('style');
+            style.innerHTML = `
+                .w-webflow-badge, a.w-webflow-badge, a[href*="webflow.com?utm_campaign=brandjs"],
+                #__framer-badge-container, a[href*="framer.com/showcase"],
+                #WIX_ADS, div[data-testid="wix-ads"] { 
+                    display: none !important; 
+                    opacity: 0 !important; 
+                    visibility: hidden !important; 
+                }
+            `;
+            document.head.appendChild(style);
+        });
+
+        // Get total page height
+        const height = await page.evaluate(() => document.documentElement.scrollHeight);
+
+        // Generate PDF
+        // Note: page.pdf generates a PDF which is easily imported into Figma keeping vectors/fonts nicely formatted
+        const pdfBuffer = await page.pdf({
+            printBackground: true,
+            width: '1440px',
+            height: height + 'px',
+            pageRanges: '1'
+        });
+
+        await browser.close();
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${hostname}-design.pdf"`);
+        return res.send(pdfBuffer);
+
+    } catch (err) {
+        console.error("Figma Export Error:", err.message);
+        return res.status(500).json({ error: `Figma Export Failed: ${err.message}` });
+    }
+});
+
 const port = process.env.PORT || 3000;
 
 if (process.env.NODE_ENV !== 'production') {

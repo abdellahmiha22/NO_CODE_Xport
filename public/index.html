@@ -101,6 +101,7 @@
                 mode: 'single',
                 url: '',
                 isLoading: false,
+                isFigmaLoading: false,
                 error: null,
                 platform: 'framer',
                 success: false,
@@ -157,6 +158,57 @@
                         this.error = err.message;
                     } finally {
                         this.isLoading = false;
+                    }
+                },
+                async exportFigma() {
+                    if (!this.url) {
+                        this.error = "Please enter a valid website URL.";
+                        return;
+                    }
+                    this.error = null;
+                    this.isFigmaLoading = true;
+                    this.success = false;
+
+                    try {
+                        const response = await fetch('/api/export/figma', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ targetUrl: this.url })
+                        });
+
+                        if (!response.ok) {
+                            let msg = 'Figma Export failed';
+                            try { const d = await response.json(); msg = d.error || msg; } catch(e) {}
+                            throw new Error(msg);
+                        }
+
+                        const blob = await response.blob();
+                        const downloadUrl = window.URL.createObjectURL(blob);
+                        
+                        let filename = 'design.pdf';
+                        const contentDisposition = response.headers.get('Content-Disposition');
+                        if (contentDisposition) {
+                            const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+                            if (filenameMatch && filenameMatch[1]) {
+                                filename = filenameMatch[1];
+                            }
+                        }
+                        
+                        const a = document.createElement('a');
+                        a.href = downloadUrl;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(downloadUrl);
+                        
+                        this.success = true;
+                        setTimeout(() => { this.success = false; }, 5000);
+
+                    } catch (err) {
+                        this.error = err.message;
+                    } finally {
+                        this.isFigmaLoading = false;
                     }
                 }
             }))
@@ -335,11 +387,20 @@
 
                         <button 
                             @click="exportSite" 
-                            :disabled="isLoading" 
+                            :disabled="isLoading || isFigmaLoading" 
                             class="w-full py-5 px-8 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-2xl font-bold text-lg shadow-glow transition-all active:scale-[0.98] flex items-center justify-center gap-3"
                         >
                             <i class="ph-bold" :class="isLoading ? 'ph-spinner animate-spin' : 'ph-lightning'"></i>
                             <span x-text="isLoading ? 'Exporting...' : 'Start Free Export' "></span>
+                        </button>
+
+                        <button 
+                            @click="exportFigma" 
+                            :disabled="isLoading || isFigmaLoading" 
+                            class="w-full mt-4 py-4 px-8 bg-slate-800 dark:bg-black hover:bg-slate-900 dark:hover:bg-slate-900 border border-slate-700 dark:border-slate-800 disabled:opacity-50 text-white rounded-2xl font-bold text-lg transition-all active:scale-[0.98] flex items-center justify-center gap-3"
+                        >
+                            <i class="ph-bold" :class="isFigmaLoading ? 'ph-spinner animate-spin' : 'ph-figma-logo'"></i>
+                            <span x-text="isFigmaLoading ? 'Converting to Figma...' : 'To Figma Design' "></span>
                         </button>
                     </div>
                 </section>
