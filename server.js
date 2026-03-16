@@ -328,8 +328,7 @@ app.post('/api/export/figma', async (req, res) => {
         // Execute parsing to get standard Figma layers
         const figmaData = await page.evaluate(() => {
             if (typeof window.htmlToFigma !== 'undefined' && typeof window.htmlToFigma.htmlToFigma === 'function') {
-                const layers = window.htmlToFigma.htmlToFigma('body', true, false);
-                return { layers };
+                return window.htmlToFigma.htmlToFigma('body', true, false);
             } else {
                 throw new Error("htmlToFigma parser did not load correctly.");
             }
