@@ -279,11 +279,14 @@ app.post('/api/export/figma', async (req, res) => {
         let browser;
         // If we are on Vercel or AWS, we use sparticuz to load a serverless friendly chromium
         if (process.env.VERCEL || process.env.AWS_REGION || process.env.AWS_EXECUTION_ENV) {
-            const chromium = require('@sparticuz/chromium');
+            const chromium = require('@sparticuz/chromium-min');
             browser = await puppeteerCore.launch({
                 args: chromium.args,
                 defaultViewport: chromium.defaultViewport,
-                executablePath: await chromium.executablePath(),
+                // We fetch the chromium binary directly from the stable GitHub release to avoid Vercel layer size limits and missing OS libs
+                executablePath: await chromium.executablePath(
+                    'https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar'
+                ),
                 headless: chromium.headless,
                 ignoreHTTPSErrors: true,
             });
