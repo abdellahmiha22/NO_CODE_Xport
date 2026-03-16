@@ -17,8 +17,8 @@
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "queue": "^7.0.0",
-    "puppeteer": "^22.6.0",
-    "puppeteer-core": "^22.6.0",
-    "@sparticuz/chromium": "^123.0.0"
+    "puppeteer": "^24.2.0",
+    "puppeteer-core": "^24.2.0",
+    "@sparticuz/chromium": "^131.0.1"
   }
 }
