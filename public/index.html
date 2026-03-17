@@ -160,55 +160,14 @@
                         this.isLoading = false;
                     }
                 },
-                async exportFigma() {
+                exportFigma() {
                     if (!this.url) {
                         this.error = "Please enter a valid website URL.";
                         return;
                     }
                     this.error = null;
-                    this.isFigmaLoading = true;
-                    this.successType = null;
-
-                    try {
-                        const response = await fetch('/api/export/figma', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ targetUrl: this.url })
-                        });
-
-                        if (!response.ok) {
-                            let msg = 'Figma Export failed';
-                            try { const d = await response.json(); msg = d.error || msg; } catch(e) {}
-                            throw new Error(msg);
-                        }
-
-                        const blob = await response.blob();
-                        const downloadUrl = window.URL.createObjectURL(blob);
-                        
-                        let filename = 'design.figma.json';
-                        const contentDisposition = response.headers.get('Content-Disposition');
-                        if (contentDisposition) {
-                            const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
-                            if (filenameMatch && filenameMatch[1]) {
-                                filename = filenameMatch[1];
-                            }
-                        }
-                        
-                        const a = document.createElement('a');
-                        a.href = downloadUrl;
-                        a.download = filename;
-                        document.body.appendChild(a);
-                        a.click();
-                        a.remove();
-                        window.URL.revokeObjectURL(downloadUrl);
-                        
-                        this.successType = 'figma';
-
-                    } catch (err) {
-                        this.error = err.message;
-                    } finally {
-                        this.isFigmaLoading = false;
-                    }
+                    this.successType = 'figma';
+                    this.figmaUrl = window.location.origin + '/api/export/preview?targetUrl=' + encodeURIComponent(this.url);
                 }
             }))
         })
@@ -385,8 +344,13 @@
                         </div>
 
                         <div x-show="successType === 'figma'" x-cloak x-transition class="p-4 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-400 rounded-2xl text-sm justify-between font-medium flex-col flex gap-2">
-                           <div class="flex gap-2 items-center"><i class="ph-fill ph-figma-logo text-xl"></i> <b>Figma JSON ready!</b></div>
-                           <p class="text-xs opacity-80 pl-7">1. Open Figma<br>2. Run "HTML to Figma" plugin by Builder.io<br>3. Upload this JSON</p>
+                           <div class="flex gap-2 items-center"><i class="ph-fill ph-figma-logo text-xl"></i> <b>Use html.to.design Plugin!</b></div>
+                           <p class="text-xs opacity-80 pl-7 leading-relaxed">
+                              Copy this proxy URL (watermarks removed):<br>
+                              <code class="block bg-indigo-100 dark:bg-indigo-900/50 p-2 rounded mt-1 mb-2 text-[10px] break-all select-all font-mono" x-text="figmaUrl"></code>
+                              1. Open Figma & Run <b>html.to.design</b><br>
+                              2. Paste the URL above & Import!
+                           </p>
                         </div>
 
                         <button 
@@ -400,11 +364,11 @@
 
                         <button 
                             @click="exportFigma" 
-                            :disabled="isFigmaLoading" 
+                            :disabled="isLoading" 
                             class="w-full mt-4 py-4 px-8 bg-slate-800 dark:bg-black hover:bg-slate-900 dark:hover:bg-slate-900 border border-slate-700 dark:border-slate-800 disabled:opacity-50 text-white rounded-2xl font-bold text-lg transition-all active:scale-[0.98] flex items-center justify-center gap-3"
                         >
-                            <i class="ph-bold" :class="isFigmaLoading ? 'ph-spinner animate-spin' : 'ph-figma-logo'"></i>
-                            <span x-text="isFigmaLoading ? 'Generating JSON...' : 'To Figma Design' "></span>
+                            <i class="ph-bold ph-figma-logo"></i>
+                            <span>To Figma Design</span>
                         </button>
                     </div>
                 </section>

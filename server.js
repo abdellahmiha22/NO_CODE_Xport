@@ -260,90 +260,28 @@ app.post('/api/export/zip', async (req, res) => {
     }
 });
 
-const puppeteerCore = require('puppeteer-core');
-const puppeteer = require('puppeteer');
 
-// Figma / PDF Export ENDPOINT
-app.post('/api/export/figma', async (req, res) => {
+// Html.to.design Proxy Preview ENDPOINT
+app.get('/api/export/preview', async (req, res) => {
     try {
-        let { targetUrl } = req.body;
-        if (!targetUrl) return res.status(400).json({ error: 'URL is required' });
+        let { targetUrl } = req.query;
+        if (!targetUrl) return res.status(400).send('URL is required');
 
         if (!targetUrl.startsWith('http')) {
             targetUrl = 'https://' + targetUrl;
         }
+
+        const html = await fetchPage(targetUrl);
+        const $ = cheerio.load(html);
+
+        makeUrlsAbsolute($, targetUrl);
+        const cleanHtml = removeWatermarks($);
         
-        const parsedUrl = new URL(targetUrl);
-        const hostname = parsedUrl.hostname.replace('www.', '');
-
-        let browser;
-        // If we are on Vercel or AWS, we use sparticuz to load a serverless friendly chromium
-        if (process.env.VERCEL || process.env.AWS_REGION || process.env.AWS_EXECUTION_ENV) {
-            const chromium = require('@sparticuz/chromium');
-            browser = await puppeteerCore.launch({
-                args: chromium.args,
-                defaultViewport: chromium.defaultViewport,
-                executablePath: await chromium.executablePath(),
-                headless: chromium.headless,
-                ignoreHTTPSErrors: true,
-            });
-        } else {
-            // Local fallback uses standard puppeteer
-            browser = await puppeteer.launch({ 
-                headless: 'new',
-                args: ['--no-sandbox', '--disable-setuid-sandbox'] 
-            });
-        }
-
-        const page = await browser.newPage();
-        
-        // Emulate desktop
-        await page.setViewport({ width: 1440, height: 900 });
-        
-        // Wait until there are no more than 2 network connections for at least 500 ms
-        await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-        
-        // Hide watermarks before generating the layout
-        await page.evaluate(() => {
-            const style = document.createElement('style');
-            style.innerHTML = `
-                .w-webflow-badge, a.w-webflow-badge, a[href*="webflow.com?utm_campaign=brandjs"],
-                #__framer-badge-container, a[href*="framer.com/showcase"],
-                #WIX_ADS, div[data-testid="wix-ads"] { 
-                    display: none !important; 
-                    opacity: 0 !important; 
-                    visibility: hidden !important; 
-                }
-            `;
-            document.head.appendChild(style);
-        });
-
-        // Use the html-to-figma library rather than PDF to create editable JSON
-        // Wait a little extra to ensure any final animations/fonts are settled
-        await new Promise(r => setTimeout(r, 1500));
-        
-        // Inject html-to-figma script from CDN
-        await page.addScriptTag({ url: 'https://cdn.jsdelivr.net/npm/@builder.io/html-to-figma@0.0.3/dist/browser.js' });
-
-        // Execute parsing to get standard Figma layers
-        const figmaData = await page.evaluate(() => {
-            if (typeof window.htmlToFigma !== 'undefined' && typeof window.htmlToFigma.htmlToFigma === 'function') {
-                return window.htmlToFigma.htmlToFigma('body', true, false);
-            } else {
-                throw new Error("htmlToFigma parser did not load correctly.");
-            }
-        });
-
-        await browser.close();
-
-        // Send perfectly structured figma JSON!
-        res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Content-Disposition', `attachment; filename="${hostname}-design.figma.json"`);
-        return res.json(figmaData);
-
+        res.setHeader('Content-Type', 'text/html');
+        return res.send(cleanHtml);
     } catch (err) {
-        console.error("Figma Export Error:", err.message);
-        return res.status(500).json({ error: `Figma Export Failed: ${err.message}` });
+        console.error("Preview Export Error:", err.message);
+        return res.status(500).send(`Export Failed: ${err.message}`);
     }
 });
 
