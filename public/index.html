@@ -66,7 +66,7 @@
     <!-- Interactivity -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    
+    <script src="/figma-exporter-bundle.js"></script>
     <style>
         [x-cloak] { display: none !important; }
         .glass-panel {
@@ -82,6 +82,7 @@
         .gradient-text {
             background: linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
         @keyframes float {
@@ -90,6 +91,11 @@
             100% { transform: translateY(0px); }
         }
         .animate-float { animation: float 6s ease-in-out infinite; }
+        @keyframes pulse-glow { 0%,100%{box-shadow:0 0 8px rgba(139,92,246,.3)} 50%{box-shadow:0 0 24px rgba(139,92,246,.6)} }
+        .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+        @keyframes marquee { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+        .animate-marquee { animation: marquee 30s linear infinite; }
+        .animate-marquee:hover { animation-play-state: paused; }
     </style>
 
     <script>
@@ -101,32 +107,63 @@
                 mode: 'single',
                 url: '',
                 isLoading: false,
-                isFigmaLoading: false,
                 error: null,
                 platform: 'framer',
                 successType: null,
-                
+                progress: null,
+                faqOpen: null,
+
+                // Next.js conversion state
+                convertingNextJS: false,
+                nextjsSuccess: false,
+                nextjsError: null,
+                nextjsStats: null,       // { pages, assets, files, images, fonts, cssFiles, jsFiles }
+                nextjsZipUrl: null,      // blob URL for re-download
+                nextjsExportMode: 'ssr',
+                nextjsLanguage: 'ts',
+
+                // Project preview modal
+                previewOpen: false,
+                previewManifest: null,   // full JSON manifest from server
+                previewTab: 'files',     // 'files' | 'pages' | 'deploy'
+                previewLoading: false,
+                previewError: null,
+                fileSearch: '',
+
                 init() {
                     if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
                         this.darkMode = true;
                     }
                 },
+
                 setPlatform(p) {
                     this.platform = p;
-                    this.mode = 'single';
                     this.sidebarOpen = false;
                 },
+
+                setMode(m) {
+                    this.mode = m === 'zip' ? 'zip' : 'single';
+                },
+
+                // ── Main export ──────────────────────────────────────────
                 async exportSite() {
-                    if (!this.url) {
-                        this.error = "Please enter a valid website URL.";
-                        return;
-                    }
+                    if (!this.url) { this.error = 'Please enter a valid website URL.'; return; }
                     this.error = null;
                     this.isLoading = true;
                     this.successType = null;
+                    this.progress = null;
 
                     try {
-                        const endpoint = this.mode === 'single' ? '/api/export/single' : '/api/export/zip';
+                        let endpoint, filename;
+                        if (this.mode === 'zip') {
+                            endpoint = '/api/export/zip';
+                            filename = 'full-export.zip';
+                            this.progress = { status: 'crawling' };
+                        } else {
+                            endpoint = '/api/export/single';
+                            filename = 'export.html';
+                        }
+
                         const response = await fetch(endpoint, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -141,34 +178,182 @@
 
                         const blob = await response.blob();
                         const downloadUrl = window.URL.createObjectURL(blob);
-                        let filename = this.mode === 'zip' ? 'export.zip' : 'export.html';
-                        
                         const a = document.createElement('a');
-                        a.href = downloadUrl;
-                        a.download = filename;
-                        document.body.appendChild(a);
-                        a.click();
-                        a.remove();
+                        a.href = downloadUrl; a.download = filename;
+                        document.body.appendChild(a); a.click(); a.remove();
                         window.URL.revokeObjectURL(downloadUrl);
-                        
-                        this.successType = 'html';
-                        setTimeout(() => { if (this.successType === 'html') this.successType = null; }, 5000);
 
+                        this.successType = this.mode === 'zip' ? 'zip' : 'html';
+                        this.progress = null;
+                        this.nextjsSuccess = false;
+                        this.nextjsError = null;
+                        this.nextjsStats = null;
+                        this.previewManifest = null;
                     } catch (err) {
                         this.error = err.message;
+                        this.progress = null;
                     } finally {
                         this.isLoading = false;
                     }
                 },
-                exportFigma() {
-                    if (!this.url) {
-                        this.error = "Please enter a valid website URL.";
-                        return;
-                    }
+
+                // ── Figma export ─────────────────────────────────────────
+                async exportFigma() {
+                    if (!this.url) { this.error = 'Please enter a valid website URL.'; return; }
                     this.error = null;
-                    this.successType = 'figma';
-                    this.figmaUrl = window.location.origin + '/api/export/preview?targetUrl=' + encodeURIComponent(this.url);
-                }
+                    this.isLoading = true;
+                    try {
+                        const iframe = document.createElement('iframe');
+                        iframe.style.cssText = 'width:1200px;height:800px;position:absolute;top:-9999px;left:-9999px';
+                        document.body.appendChild(iframe);
+                        iframe.src = window.location.origin + '/api/export/preview?targetUrl=' + encodeURIComponent(this.url);
+                        await new Promise((resolve, reject) => {
+                            iframe.onload = resolve;
+                            iframe.onerror = () => reject(new Error('Failed to load proxy frame.'));
+                            setTimeout(() => reject(new Error('Timeout loading page')), 15000);
+                        });
+                        await new Promise(r => setTimeout(r, 2000));
+                        const doc = iframe.contentDocument;
+                        if (!doc || !doc.body) throw new Error('Cannot access iframe body.');
+                        const layer = await window.FigmaExporter.htmlToFigma(doc.body, { useBoundingRect: true });
+                        document.body.removeChild(iframe);
+                        const blob = new Blob([JSON.stringify({ layers: [layer] }, null, 2)], { type: 'application/json' });
+                        const downloadUrl = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = downloadUrl; a.download = 'design.json';
+                        document.body.appendChild(a); a.click(); a.remove();
+                        window.URL.revokeObjectURL(downloadUrl);
+                        this.successType = 'figma';
+                    } catch (err) {
+                        this.error = err.message || 'Figma export failed';
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+
+                // ── Next.js conversion ────────────────────────────────────
+                async exportNextJS() {
+                    if (!this.url) { this.error = 'Please enter a valid website URL first.'; return; }
+                    this.convertingNextJS = true;
+                    this.nextjsSuccess = false;
+                    this.nextjsError = null;
+                    this.nextjsStats = null;
+                    this.previewManifest = null;
+                    this.error = null;
+
+                    try {
+                        const response = await fetch('/api/export/nextjs', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ targetUrl: this.url, exportMode: this.nextjsExportMode, language: this.nextjsLanguage })
+                        });
+
+                        if (!response.ok) {
+                            let msg = 'Conversion failed';
+                            try { const d = await response.json(); msg = d.error || msg; } catch(e) {}
+                            throw new Error(msg);
+                        }
+
+                        // Read stats from headers
+                        this.nextjsStats = {
+                            pages: parseInt(response.headers.get('X-Pages-Count') || '1'),
+                            assets: parseInt(response.headers.get('X-Assets-Count') || '0'),
+                            files: parseInt(response.headers.get('X-Files-Count') || '0'),
+                        };
+
+                        const blob = await response.blob();
+                        // Keep blob URL for re-download from modal
+                        if (this.nextjsZipUrl) window.URL.revokeObjectURL(this.nextjsZipUrl);
+                        this.nextjsZipUrl = window.URL.createObjectURL(blob);
+
+                        const a = document.createElement('a');
+                        a.href = this.nextjsZipUrl;
+                        a.download = 'nextjs-project.zip';
+                        document.body.appendChild(a); a.click(); a.remove();
+
+                        this.nextjsSuccess = true;
+
+                        // Background: fetch manifest for preview
+                        this.fetchNextJSManifest();
+
+                    } catch (err) {
+                        this.nextjsError = err.message;
+                    } finally {
+                        this.convertingNextJS = false;
+                    }
+                },
+
+                // ── Fetch file manifest for preview modal ─────────────────
+                async fetchNextJSManifest() {
+                    if (!this.url) return;
+                    try {
+                        const r = await fetch('/api/export/nextjs-preview', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ targetUrl: this.url })
+                        });
+                        if (r.ok) {
+                            this.previewManifest = await r.json();
+                        }
+                    } catch {}
+                },
+
+                // ── Open project preview modal ────────────────────────────
+                openPreview() {
+                    this.previewOpen = true;
+                    this.previewTab = 'files';
+                    this.fileSearch = '';
+                    if (!this.previewManifest && this.url && !this.previewLoading) {
+                        this.previewLoading = true;
+                        this.fetchNextJSManifest().finally(() => { this.previewLoading = false; });
+                    }
+                },
+
+                // ── Re-download ZIP ───────────────────────────────────────
+                redownloadZip() {
+                    if (!this.nextjsZipUrl) { this.exportNextJS(); return; }
+                    const a = document.createElement('a');
+                    a.href = this.nextjsZipUrl;
+                    a.download = 'nextjs-project.zip';
+                    document.body.appendChild(a); a.click(); a.remove();
+                },
+
+                // ── Push to GitHub (opens GitHub new repo flow) ───────────
+                pushToGitHub() {
+                    // GitHub doesn't allow direct upload via URL, guide user instead
+                    window.open('https://github.com/new', '_blank');
+                },
+
+                // ── Deploy to Vercel ──────────────────────────────────────
+                deployToVercel() {
+                    // Vercel deploy button opens their deploy flow
+                    const repoName = this.previewManifest?.hostname || 'my-website';
+                    window.open(`https://vercel.com/new`, '_blank');
+                },
+
+                // ── Computed helpers ──────────────────────────────────────
+                get filteredFiles() {
+                    if (!this.previewManifest) return [];
+                    const q = this.fileSearch.toLowerCase();
+                    return this.previewManifest.files.filter(f =>
+                        !q || f.path.toLowerCase().includes(q)
+                    );
+                },
+
+                fileIcon(type) {
+                    return type === 'js' ? '⚛️'
+                        : type === 'css' ? '🎨'
+                        : type === 'json' ? '⚙️'
+                        : type === 'md' ? '📄'
+                        : '📦';
+                },
+
+                formatBytes(bytes) {
+                    if (!bytes) return '—';
+                    if (bytes < 1024) return bytes + ' B';
+                    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+                    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+                },
             }))
         })
     </script>
@@ -250,10 +435,10 @@
                                 </button>
                             </li>
                             <li>
-                                <button @click="pricingOpen = true" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50">
+                                <button @click="setMode('zip'); sidebarOpen = false;" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50">
                                     <i class="ph-fill ph-file-zip text-xl"></i>
                                     <span>Full Site Export</span>
-                                    <span class="ml-auto text-[10px] bg-primary-100 dark:bg-primary-950 text-primary-600 px-1.5 py-0.5 rounded-md text-[9px] font-black">PRO</span>
+                                    <span class="ml-auto text-[10px] bg-emerald-100 dark:bg-emerald-950 text-emerald-600 px-1.5 py-0.5 rounded-md font-black">NEW</span>
                                 </button>
                             </li>
                         </ul>
@@ -274,8 +459,8 @@
 
                 <!-- Sidebar Footer -->
                 <div class="p-6 border-t border-slate-100 dark:border-slate-800">
-                    <button @click="pricingOpen = true" class="w-full bg-primary-600 text-white py-3 rounded-xl text-sm font-bold shadow-glow hover:bg-primary-700 transition-colors">
-                        Upgrade Now
+                    <button @click="setMode('zip'); sidebarOpen = false;" class="w-full bg-primary-600 text-white py-3 rounded-xl text-sm font-bold shadow-glow hover:bg-primary-700 transition-colors">
+                        Try Full Export
                     </button>
                 </div>
             </div>
@@ -315,11 +500,17 @@
                 <section class="glass-panel p-2 rounded-3xl shadow-premium border border-slate-200 dark:border-slate-800 max-w-2xl mx-auto relative group">
                     <div class="p-6 md:p-10 space-y-8">
                         <div class="flex p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl">
-                            <button @click="mode = 'single'" :class="mode === 'single' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary-600 dark:text-primary-400' : 'text-slate-500 hover:text-slate-700'" class="flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all">Single Page</button>
-                            <button @click="pricingOpen = true" class="flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all text-slate-500 hover:text-slate-700 flex items-center justify-center gap-2">
+                            <button @click="setMode('single')" :class="mode === 'single' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary-600 dark:text-primary-400' : 'text-slate-500 hover:text-slate-700'" class="flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all">Single Page</button>
+                            <button @click="setMode('zip')" :class="mode === 'zip' ? 'bg-white dark:bg-slate-800 shadow-sm text-primary-600 dark:text-primary-400' : 'text-slate-500 hover:text-slate-700'" class="flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
                                 Full Site (ZIP)
-                                <span class="text-[10px] bg-primary-100 dark:bg-primary-950 text-primary-600 px-1.5 py-0.5 rounded-md font-black">PRO</span>
+                                <span class="text-[10px] bg-emerald-100 dark:bg-emerald-950 text-emerald-600 px-1.5 py-0.5 rounded-md font-black">NEW</span>
                             </button>
+                        </div>
+
+                        <!-- Info banner for ZIP mode -->
+                        <div x-show="mode === 'zip'" x-cloak x-transition class="p-4 bg-primary-50 dark:bg-primary-950/30 border border-primary-200 dark:border-primary-900/50 rounded-2xl text-sm text-primary-700 dark:text-primary-300">
+                            <div class="flex items-center gap-2 font-bold mb-1"><i class="ph-fill ph-package text-lg"></i> Complete Export</div>
+                            <p class="text-xs opacity-80">Downloads all HTML pages, CSS, JavaScript, images, fonts & media as a self-contained ZIP. Host anywhere!</p>
                         </div>
 
                         <div class="relative">
@@ -337,35 +528,182 @@
                             <i class="ph-fill ph-warning-circle text-xl"></i>
                             <span x-text="error"></span>
                         </div>
+
+                        <!-- Progress indicator for ZIP export -->
+                        <div x-show="progress" x-cloak x-transition class="p-4 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900/50 rounded-2xl">
+                            <div class="flex items-center gap-3 mb-3">
+                                <i class="ph-bold ph-spinner animate-spin text-indigo-600 text-xl"></i>
+                                <span class="font-bold text-indigo-700 dark:text-indigo-300 text-sm" x-text="progress?.status === 'crawling' ? 'Crawling pages...' : progress?.status === 'downloading' ? 'Downloading assets...' : 'Packaging ZIP...'"></span>
+                            </div>
+                            <div class="w-full bg-indigo-200 dark:bg-indigo-900/50 rounded-full h-2">
+                                <div class="bg-indigo-600 h-2 rounded-full transition-all animate-pulse-glow" style="width: 60%"></div>
+                            </div>
+                        </div>
                         
                         <div x-show="successType === 'html'" x-cloak x-transition class="p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400 rounded-2xl text-sm font-medium flex items-center gap-3">
                             <i class="ph-fill ph-check-circle text-xl"></i>
-                            <span>Success! Your package is ready.</span>
+                            <span>Success! Your HTML file is ready.</span>
+                        </div>
+
+                        <div x-show="successType === 'zip'" x-cloak x-transition class="p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400 rounded-2xl text-sm font-medium flex flex-col gap-2">
+                            <div class="flex items-center gap-2"><i class="ph-fill ph-check-circle text-xl"></i> <b>Full Site Export Complete!</b></div>
+                            <p class="text-xs opacity-80 pl-7">Your ZIP includes all HTML pages, CSS, JS, images, and fonts — fully self-contained. Just unzip and host anywhere!</p>
                         </div>
 
                         <div x-show="successType === 'figma'" x-cloak x-transition class="p-4 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-400 rounded-2xl text-sm justify-between font-medium flex-col flex gap-2">
-                           <div class="flex gap-2 items-center"><i class="ph-fill ph-figma-logo text-xl"></i> <b>Use html.to.design Plugin!</b></div>
+                           <div class="flex gap-2 items-center"><i class="ph-fill ph-figma-logo text-xl"></i> <b>Design File Downloaded!</b></div>
                            <p class="text-xs opacity-80 pl-7 leading-relaxed">
-                              Copy this proxy URL (watermarks removed):<br>
-                              <code class="block bg-indigo-100 dark:bg-indigo-900/50 p-2 rounded mt-1 mb-2 text-[10px] break-all select-all font-mono" x-text="figmaUrl"></code>
-                              1. Open Figma & Run <b>html.to.design</b><br>
-                              2. Paste the URL above & Import!
+                              Open Figma → Run <a href="https://www.figma.com/community/plugin/747985167520967365/" target="_blank" class="underline font-bold text-indigo-500">HTML to Figma by Builder.io</a> plugin → Upload <code>design.json</code>
                            </p>
                         </div>
 
-                        <button 
-                            @click="exportSite" 
-                            :disabled="isLoading" 
-                            class="w-full py-5 px-8 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-2xl font-bold text-lg shadow-glow transition-all active:scale-[0.98] flex items-center justify-center gap-3"
-                        >
-                            <i class="ph-bold" :class="isLoading ? 'ph-spinner animate-spin' : 'ph-lightning'"></i>
-                            <span x-text="isLoading ? 'Exporting...' : 'Start Free Export' "></span>
-                        </button>
+                        <!-- ═══ CONVERT TO NEXT.JS RESULT PANEL ═══ -->
+                        <div x-show="successType === 'zip' || convertingNextJS || nextjsSuccess || nextjsError" x-cloak x-transition.duration.400ms
+                             class="rounded-2xl border-2 border-dashed border-violet-300 dark:border-violet-800 bg-violet-50/50 dark:bg-violet-950/20 p-5 space-y-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center text-white shadow-lg flex-shrink-0">
+                                    <i class="ph-bold ph-atom text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-display font-bold text-sm">Convert to Next.js + React</h3>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">Full working project — deploy to Vercel or GitHub in one click</p>
+                                </div>
+                            </div>
+
+                            <!-- Converting spinner -->
+                            <div x-show="convertingNextJS" x-cloak x-transition class="flex items-center gap-3 p-3 bg-violet-100 dark:bg-violet-950/40 rounded-xl">
+                                <i class="ph-bold ph-spinner animate-spin text-violet-600 text-lg"></i>
+                                <span class="text-sm font-medium text-violet-700 dark:text-violet-300">Converting your site to Next.js 14... This takes ~1 min.</span>
+                            </div>
+
+                            <!-- Error -->
+                            <div x-show="nextjsError" x-cloak x-transition class="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 rounded-xl text-xs font-medium flex items-center gap-2">
+                                <i class="ph-fill ph-warning-circle"></i>
+                                <span x-text="nextjsError"></span>
+                            </div>
+
+                            <!-- ✅ SUCCESS STATE: Stats + Actions -->
+                            <div x-show="nextjsSuccess" x-cloak x-transition class="space-y-4">
+                                <!-- Stats row -->
+                                <div class="grid grid-cols-3 gap-2">
+                                    <div class="bg-white dark:bg-slate-800 rounded-xl p-3 text-center border border-slate-100 dark:border-slate-700">
+                                        <div class="text-2xl font-display font-black text-violet-600" x-text="nextjsStats?.pages ?? '—'"></div>
+                                        <div class="text-[10px] text-slate-500 font-medium mt-0.5">Pages</div>
+                                    </div>
+                                    <div class="bg-white dark:bg-slate-800 rounded-xl p-3 text-center border border-slate-100 dark:border-slate-700">
+                                        <div class="text-2xl font-display font-black text-fuchsia-600" x-text="nextjsStats?.assets ?? '—'"></div>
+                                        <div class="text-[10px] text-slate-500 font-medium mt-0.5">Assets</div>
+                                    </div>
+                                    <div class="bg-white dark:bg-slate-800 rounded-xl p-3 text-center border border-slate-100 dark:border-slate-700">
+                                        <div class="text-2xl font-display font-black text-indigo-600" x-text="nextjsStats?.files ?? '—'"></div>
+                                        <div class="text-[10px] text-slate-500 font-medium mt-0.5">Files</div>
+                                    </div>
+                                </div>
+
+                                <!-- 📁 View Project button -->
+                                <button @click="openPreview()"
+                                    class="w-full py-3.5 px-5 bg-white dark:bg-slate-800 border-2 border-violet-300 dark:border-violet-700 hover:border-violet-500 text-violet-700 dark:text-violet-300 rounded-xl font-bold text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                                    <i class="ph-bold ph-folder-open text-lg"></i>
+                                    View Project Files
+                                </button>
+
+                                <!-- Deploy row -->
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button @click="redownloadZip()"
+                                        class="py-3 px-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-xs transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                                        <i class="ph-bold ph-download-simple"></i>
+                                        Re-download ZIP
+                                    </button>
+                                    <button @click="deployToVercel()"
+                                        class="py-3 px-4 bg-black hover:bg-slate-900 text-white rounded-xl font-bold text-xs transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                                        <svg width="14" height="14" viewBox="0 0 76 65" fill="white"><path d="M37.5274 0L75.0548 65H0L37.5274 0Z"/></svg>
+                                        Deploy to Vercel
+                                    </button>
+                                </div>
+
+                                <!-- How to run locally - clear steps -->
+                                <details class="group">
+                                    <summary class="text-xs font-bold text-slate-500 dark:text-slate-400 cursor-pointer hover:text-violet-600 flex items-center gap-1 list-none">
+                                        <i class="ph-bold ph-terminal text-sm"></i>
+                                        How to run locally? <i class="ph-bold ph-caret-down text-xs ml-auto group-open:rotate-180 transition-transform"></i>
+                                    </summary>
+                                    <div class="mt-3 p-4 bg-slate-900 rounded-xl text-xs font-mono space-y-1.5 text-slate-300">
+                                        <div class="text-slate-500"># Step 1 — Unzip the downloaded file</div>
+                                        <div class="text-emerald-400"># Step 2 — Open terminal INSIDE the unzipped folder</div>
+                                        <div class="text-yellow-300">cd path/to/<span x-text="(previewManifest?.hostname || 'nextjs-project') + '-nextjs'"></span></div>
+                                        <div class="text-yellow-300">npm install</div>
+                                        <div class="text-yellow-300">npm run dev</div>
+                                        <div class="text-slate-500 mt-2"># Then open → http://localhost:3000</div>
+                                    </div>
+                                </details>
+                            </div>
+
+                            <!-- Export options: mode + language toggles -->
+                            <div x-show="!nextjsSuccess" class="flex flex-col gap-2 mb-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-stone-400 w-24 shrink-0">Export Mode</span>
+                                    <div class="flex rounded-lg overflow-hidden border border-stone-700 text-xs">
+                                        <button type="button"
+                                            class="px-3 py-1.5 transition-colors"
+                                            :class="nextjsExportMode === 'ssr' ? 'bg-yellow-600 text-white' : 'bg-stone-800 text-stone-400 hover:text-white'"
+                                            @click="nextjsExportMode = 'ssr'">Full SSR</button>
+                                        <button type="button"
+                                            class="px-3 py-1.5 transition-colors"
+                                            :class="nextjsExportMode === 'static' ? 'bg-yellow-600 text-white' : 'bg-stone-800 text-stone-400 hover:text-white'"
+                                            @click="nextjsExportMode = 'static'">Static</button>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-stone-400 w-24 shrink-0">Language</span>
+                                    <div class="flex rounded-lg overflow-hidden border border-stone-700 text-xs">
+                                        <button type="button"
+                                            class="px-3 py-1.5 transition-colors"
+                                            :class="nextjsLanguage === 'ts' ? 'bg-yellow-600 text-white' : 'bg-stone-800 text-stone-400 hover:text-white'"
+                                            @click="nextjsLanguage = 'ts'">TypeScript</button>
+                                        <button type="button"
+                                            class="px-3 py-1.5 transition-colors"
+                                            :class="nextjsLanguage === 'js' ? 'bg-yellow-600 text-white' : 'bg-stone-800 text-stone-400 hover:text-white'"
+                                            @click="nextjsLanguage = 'js'">JavaScript</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Convert button (before success) -->
+                            <button
+                                @click="exportNextJS"
+                                :disabled="convertingNextJS || isLoading"
+                                x-show="!nextjsSuccess"
+                                class="w-full py-4 px-6 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 disabled:opacity-50 text-white rounded-xl font-bold text-sm shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                            >
+                                <i class="ph-bold" :class="convertingNextJS ? 'ph-spinner animate-spin' : 'ph-rocket-launch'"></i>
+                                <span x-text="convertingNextJS ? 'Converting...' : '⚛️ Convert to Next.js Project'"></span>
+                            </button>
+                        </div>
+
+                        <div class="flex gap-3">
+                            <button
+                                @click="exportSite"
+                                :disabled="isLoading"
+                                class="flex-1 py-5 px-8 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-2xl font-bold text-lg shadow-glow transition-all active:scale-[0.98] flex items-center justify-center gap-3"
+                            >
+                                <i class="ph-bold" :class="isLoading ? 'ph-spinner animate-spin' : (mode === 'zip' ? 'ph-file-zip' : 'ph-lightning')"></i>
+                                <span x-text="isLoading ? (mode === 'zip' ? 'Exporting Full Site...' : 'Exporting...') : (mode === 'zip' ? 'Export Full Site as ZIP' : 'Start Free Export')"></span>
+                            </button>
+                            <button
+                                @click="exportNextJS"
+                                :disabled="convertingNextJS || isLoading"
+                                title="Convert to Next.js Project"
+                                class="py-5 px-5 bg-gradient-to-br from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 disabled:opacity-50 text-white rounded-2xl font-bold shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 whitespace-nowrap"
+                            >
+                                <i class="ph-bold text-xl" :class="convertingNextJS ? 'ph-spinner animate-spin' : 'ph-atom'"></i>
+                                <span class="text-sm hidden sm:inline" x-text="convertingNextJS ? 'Converting...' : 'To Next.js'"></span>
+                            </button>
+                        </div>
 
                         <button 
                             @click="exportFigma" 
                             :disabled="isLoading" 
-                            class="w-full mt-4 py-4 px-8 bg-slate-800 dark:bg-black hover:bg-slate-900 dark:hover:bg-slate-900 border border-slate-700 dark:border-slate-800 disabled:opacity-50 text-white rounded-2xl font-bold text-lg transition-all active:scale-[0.98] flex items-center justify-center gap-3"
+                            class="w-full py-4 px-8 bg-slate-800 dark:bg-black hover:bg-slate-900 dark:hover:bg-slate-900 border border-slate-700 dark:border-slate-800 disabled:opacity-50 text-white rounded-2xl font-bold text-lg transition-all active:scale-[0.98] flex items-center justify-center gap-3"
                         >
                             <i class="ph-bold ph-figma-logo"></i>
                             <span>To Figma Design</span>
@@ -373,76 +711,393 @@
                     </div>
                 </section>
 
-                <!-- Pricing Modal Overflow -->
-                <div x-show="pricingOpen" x-cloak class="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div @click="pricingOpen = false" class="absolute inset-0 bg-slate-950/60 backdrop-blur-md"></div>
-                    <div class="relative w-full max-w-4xl glass-panel !bg-white dark:!bg-slate-900 rounded-[2.5rem] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col p-8 lg:p-12">
-                        <div class="flex items-center justify-between mb-8">
-                            <h2 class="text-3xl font-display font-bold">Pricing Plans</h2>
-                            <button @click="pricingOpen = false" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
-                                <i class="ph ph-x text-2xl"></i>
-                            </button>
+                <!-- What You'll Get Section -->
+                <section class="space-y-8 pt-4">
+                    <div class="text-center space-y-3">
+                        <h2 class="text-2xl md:text-3xl font-display font-bold">What You'll Get</h2>
+                        <p class="text-slate-500 dark:text-slate-400 text-sm max-w-xl mx-auto">A complete, self-hosted copy of your website — no platform dependency ever again.</p>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <div class="glass-panel rounded-2xl p-5 border border-slate-200 dark:border-slate-800 hover:border-primary-500/50 transition-all hover:scale-[1.02] group">
+                            <div class="text-3xl mb-3">📄</div>
+                            <h3 class="font-bold text-sm mb-1">HTML Pages</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">All pages crawled & cleaned, CMS included</p>
                         </div>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <!-- Starter -->
-                            <div class="p-8 rounded-[2rem] bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 flex flex-col group">
-                                <div class="mb-6">
-                                    <div class="text-primary-600 font-bold text-xs uppercase mb-1">Starter</div>
-                                    <div class="text-4xl font-display font-bold">$3<span class="text-slate-400 text-sm font-normal">/mo</span></div>
-                                </div>
-                                <ul class="space-y-4 mb-10 flex-1 text-sm text-slate-600 dark:text-slate-300">
-                                    <li class="flex items-center gap-2"><i class="ph-bold ph-check text-emerald-500"></i>10 Single Exports</li>
-                                    <li class="flex items-center gap-2"><i class="ph-bold ph-check text-emerald-500"></i>Framer & Webflow</li>
-                                    <li class="flex items-center gap-2"><i class="ph-bold ph-check text-emerald-500"></i>Clean Code</li>
-                                </ul>
-                                <button class="w-full py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-sm hover:bg-slate-50 transition-colors">Select Starter</button>
-                            </div>
+                        <div class="glass-panel rounded-2xl p-5 border border-slate-200 dark:border-slate-800 hover:border-primary-500/50 transition-all hover:scale-[1.02]">
+                            <div class="text-3xl mb-3">🎨</div>
+                            <h3 class="font-bold text-sm mb-1">CSS Styles</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Full styling downloaded locally</p>
+                        </div>
+                        <div class="glass-panel rounded-2xl p-5 border border-slate-200 dark:border-slate-800 hover:border-primary-500/50 transition-all hover:scale-[1.02]">
+                            <div class="text-3xl mb-3">⚡</div>
+                            <h3 class="font-bold text-sm mb-1">JavaScript</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Interactions & animations preserved</p>
+                        </div>
+                        <div class="glass-panel rounded-2xl p-5 border border-slate-200 dark:border-slate-800 hover:border-primary-500/50 transition-all hover:scale-[1.02]">
+                            <div class="text-3xl mb-3">🖼️</div>
+                            <h3 class="font-bold text-sm mb-1">Images & Media</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Every image, SVG, video & icon</p>
+                        </div>
+                        <div class="glass-panel rounded-2xl p-5 border border-slate-200 dark:border-slate-800 hover:border-primary-500/50 transition-all hover:scale-[1.02]">
+                            <div class="text-3xl mb-3">🔤</div>
+                            <h3 class="font-bold text-sm mb-1">Custom Fonts</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">WOFF2, TTF — extracted from CSS</p>
+                        </div>
+                        <div class="glass-panel rounded-2xl p-5 border border-slate-200 dark:border-slate-800 hover:border-primary-500/50 transition-all hover:scale-[1.02]">
+                            <div class="text-3xl mb-3">📝</div>
+                            <h3 class="font-bold text-sm mb-1">CMS Content</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">All blog posts & dynamic pages</p>
+                        </div>
+                    </div>
+                </section>
 
-                            <!-- Pro ($5 Refined) -->
-                            <div class="p-8 rounded-[2rem] bg-white dark:bg-slate-900 border-2 border-primary-600 shadow-premium flex flex-col scale-105 z-10 relative">
-                                <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary-600 text-white text-[10px] px-3 py-1 rounded-full font-bold">POPULAR</div>
-                                <div class="mb-6">
-                                    <div class="text-primary-600 font-bold text-xs uppercase mb-1">Professional</div>
-                                    <div class="text-4xl font-display font-bold">$5<span class="text-slate-400 text-sm font-normal">/mo</span></div>
+                <!-- Testimonials Section -->
+                <section class="space-y-6 pt-4">
+                    <h2 class="text-2xl md:text-3xl font-display font-bold text-center">What Users Are Saying</h2>
+                    <div class="overflow-hidden rounded-2xl">
+                        <div class="flex animate-marquee" style="width: max-content;">
+                            <div class="flex gap-4 shrink-0 pr-4">
+                                <div class="w-72 glass-panel rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shrink-0">
+                                    <p class="text-sm text-slate-600 dark:text-slate-300 mb-3 italic">"This tool is a game-changer, so amazing!!"</p>
+                                    <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-primary-500/20 flex items-center justify-center text-xs font-bold text-primary-600">H</div><span class="text-xs font-bold">Henda</span></div>
                                 </div>
-                                <ul class="space-y-4 mb-10 flex-1 text-sm text-slate-600 dark:text-slate-300 font-medium">
-                                    <li class="flex items-center gap-2 text-slate-900 dark:text-white font-bold"><i class="ph-bold ph-check text-emerald-500"></i>15 Full Site Exports</li>
-                                    <li class="flex items-center gap-2"><i class="ph-bold ph-check text-emerald-500"></i>Unlimited Single Page</li>
-                                    <li class="flex items-center gap-2"><i class="ph-bold ph-check text-emerald-500"></i>Includes All Features</li>
-                                    <li class="flex items-center gap-2"><i class="ph-bold ph-check text-emerald-500"></i>Wix Engine Support</li>
-                                </ul>
-                                <button class="w-full py-3 bg-primary-600 text-white rounded-xl font-bold text-sm shadow-glow hover:bg-primary-700 transition-colors">Go Pro</button>
+                                <div class="w-72 glass-panel rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shrink-0">
+                                    <p class="text-sm text-slate-600 dark:text-slate-300 mb-3 italic">"this is awesome, you deserve to make money of this, it's simple clean fast and no bloat!"</p>
+                                    <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-emerald-500/20 flex items-center justify-center text-xs font-bold text-emerald-600">H</div><span class="text-xs font-bold">Harsh</span></div>
+                                </div>
+                                <div class="w-72 glass-panel rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shrink-0">
+                                    <p class="text-sm text-slate-600 dark:text-slate-300 mb-3 italic">"WHOEVER MADE THIS, THANK YOU. THESE NO-CODE SITES DON'T ALLOW US TO EXPORT CODE. THANK YOU SO MUCH!"</p>
+                                    <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-amber-500/20 flex items-center justify-center text-xs font-bold text-amber-600">A</div><span class="text-xs font-bold">Aryan</span></div>
+                                </div>
+                                <div class="w-72 glass-panel rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shrink-0">
+                                    <p class="text-sm text-slate-600 dark:text-slate-300 mb-3 italic">"This website is gonna change my life. Big love from Italy 🇮🇹"</p>
+                                    <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-rose-500/20 flex items-center justify-center text-xs font-bold text-rose-600">P</div><span class="text-xs font-bold">Paolo</span></div>
+                                </div>
+                                <div class="w-72 glass-panel rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shrink-0">
+                                    <p class="text-sm text-slate-600 dark:text-slate-300 mb-3 italic">"Love the product, no code platforms abuse their position"</p>
+                                    <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-indigo-500/20 flex items-center justify-center text-xs font-bold text-indigo-600">Y</div><span class="text-xs font-bold">Yoan</span></div>
+                                </div>
+                                <div class="w-72 glass-panel rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shrink-0">
+                                    <p class="text-sm text-slate-600 dark:text-slate-300 mb-3 italic">"Very good tool, works perfectly. Everything is pixel-perfect!"</p>
+                                    <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-cyan-500/20 flex items-center justify-center text-xs font-bold text-cyan-600">M</div><span class="text-xs font-bold">Michal</span></div>
+                                </div>
                             </div>
-
-                            <!-- Agency ($15 Refined) -->
-                            <div class="p-8 rounded-[2rem] bg-slate-900 text-white border border-slate-800 flex flex-col">
-                                <div class="mb-6">
-                                    <div class="text-primary-400 font-bold text-xs uppercase mb-1">Agency</div>
-                                    <div class="text-4xl font-display font-bold">$15<span class="text-slate-400 text-sm font-normal">/mo</span></div>
+                            <div class="flex gap-4 shrink-0 pr-4" aria-hidden="true">
+                                <div class="w-72 glass-panel rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shrink-0">
+                                    <p class="text-sm text-slate-600 dark:text-slate-300 mb-3 italic">"This tool is a game-changer, so amazing!!"</p>
+                                    <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-primary-500/20 flex items-center justify-center text-xs font-bold text-primary-600">H</div><span class="text-xs font-bold">Henda</span></div>
                                 </div>
-                                <ul class="space-y-4 mb-10 flex-1 text-sm text-slate-300">
-                                    <li class="flex items-center gap-2"><i class="ph-bold ph-check text-primary-400"></i>30 Full Site Exports</li>
-                                    <li class="flex items-center gap-2"><i class="ph-bold ph-check text-primary-400"></i>Unlimited Everything</li>
-                                    <li class="flex items-center gap-2"><i class="ph-bold ph-check text-primary-400"></i>White-label Output</li>
-                                    <li class="flex items-center gap-2"><i class="ph-bold ph-check text-primary-400"></i>SEO Injector Tool</li>
-                                </ul>
-                                <button class="w-full py-3 bg-primary-600 text-white rounded-xl font-bold text-sm shadow-glow hover:bg-primary-700 transition-colors">Select Agency</button>
+                                <div class="w-72 glass-panel rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shrink-0">
+                                    <p class="text-sm text-slate-600 dark:text-slate-300 mb-3 italic">"this is awesome, you deserve to make money of this, it's simple clean fast and no bloat!"</p>
+                                    <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-emerald-500/20 flex items-center justify-center text-xs font-bold text-emerald-600">H</div><span class="text-xs font-bold">Harsh</span></div>
+                                </div>
+                                <div class="w-72 glass-panel rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shrink-0">
+                                    <p class="text-sm text-slate-600 dark:text-slate-300 mb-3 italic">"WHOEVER MADE THIS, THANK YOU. THESE NO-CODE SITES DON'T ALLOW US TO EXPORT CODE. THANK YOU SO MUCH!"</p>
+                                    <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-amber-500/20 flex items-center justify-center text-xs font-bold text-amber-600">A</div><span class="text-xs font-bold">Aryan</span></div>
+                                </div>
+                                <div class="w-72 glass-panel rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shrink-0">
+                                    <p class="text-sm text-slate-600 dark:text-slate-300 mb-3 italic">"This website is gonna change my life. Big love from Italy 🇮🇹"</p>
+                                    <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-rose-500/20 flex items-center justify-center text-xs font-bold text-rose-600">P</div><span class="text-xs font-bold">Paolo</span></div>
+                                </div>
+                                <div class="w-72 glass-panel rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shrink-0">
+                                    <p class="text-sm text-slate-600 dark:text-slate-300 mb-3 italic">"Love the product, no code platforms abuse their position"</p>
+                                    <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-indigo-500/20 flex items-center justify-center text-xs font-bold text-indigo-600">Y</div><span class="text-xs font-bold">Yoan</span></div>
+                                </div>
+                                <div class="w-72 glass-panel rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shrink-0">
+                                    <p class="text-sm text-slate-600 dark:text-slate-300 mb-3 italic">"Very good tool, works perfectly. Everything is pixel-perfect!"</p>
+                                    <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-cyan-500/20 flex items-center justify-center text-xs font-bold text-cyan-600">M</div><span class="text-xs font-bold">Michal</span></div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                </section>
+
+                <!-- FAQ Section -->
+                <section class="space-y-6 pt-4">
+                    <h2 class="text-2xl md:text-3xl font-display font-bold text-center">Common Questions</h2>
+                    <div class="max-w-2xl mx-auto space-y-3">
+                        <div class="glass-panel rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                            <button @click="faqOpen = faqOpen === 1 ? null : 1" class="w-full p-5 flex items-center justify-between text-left font-bold text-sm">
+                                <span>What exactly is in the download?</span>
+                                <i class="ph ph-caret-down transition-transform" :class="faqOpen === 1 && 'rotate-180'"></i>
+                            </button>
+                            <div x-show="faqOpen === 1" x-cloak x-transition class="px-5 pb-5 text-sm text-slate-500 dark:text-slate-400 -mt-2">
+                                You get a ZIP file containing all HTML pages, CSS stylesheets, JavaScript files, images, fonts, and media — everything organized in folders. All URLs are rewritten to be relative, so the site works offline and can be hosted anywhere.
+                            </div>
+                        </div>
+                        <div class="glass-panel rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                            <button @click="faqOpen = faqOpen === 2 ? null : 2" class="w-full p-5 flex items-center justify-between text-left font-bold text-sm">
+                                <span>Will my site work exactly the same?</span>
+                                <i class="ph ph-caret-down transition-transform" :class="faqOpen === 2 && 'rotate-180'"></i>
+                            </button>
+                            <div x-show="faqOpen === 2" x-cloak x-transition class="px-5 pb-5 text-sm text-slate-500 dark:text-slate-400 -mt-2">
+                                Yes! We download all CSS, JavaScript, images, and fonts — everything needed for a pixel-perfect copy. Dynamic features like forms or search that depend on the platform's backend will need third-party replacements, but the visual appearance is identical.
+                            </div>
+                        </div>
+                        <div class="glass-panel rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                            <button @click="faqOpen = faqOpen === 3 ? null : 3" class="w-full p-5 flex items-center justify-between text-left font-bold text-sm">
+                                <span>Does it include CMS / blog pages?</span>
+                                <i class="ph ph-caret-down transition-transform" :class="faqOpen === 3 && 'rotate-180'"></i>
+                            </button>
+                            <div x-show="faqOpen === 3" x-cloak x-transition class="px-5 pb-5 text-sm text-slate-500 dark:text-slate-400 -mt-2">
+                                Yes! The Full Site (ZIP) export uses a crawler that discovers all internal links, including CMS pages, blog posts, and dynamic routes. It crawls up to 50 pages per export.
+                            </div>
+                        </div>
+                        <div class="glass-panel rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                            <button @click="faqOpen = faqOpen === 4 ? null : 4" class="w-full p-5 flex items-center justify-between text-left font-bold text-sm">
+                                <span>Where can I host my exported site?</span>
+                                <i class="ph ph-caret-down transition-transform" :class="faqOpen === 4 && 'rotate-180'"></i>
+                            </button>
+                            <div x-show="faqOpen === 4" x-cloak x-transition class="px-5 pb-5 text-sm text-slate-500 dark:text-slate-400 -mt-2">
+                                Anywhere! GitHub Pages (free), Netlify, Vercel, Cloudflare Pages, or any traditional web host with Apache/Nginx. Just upload the ZIP contents and you're live.
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
                 <footer class="text-center pt-8 border-t border-slate-200 dark:border-slate-800 text-slate-400 text-sm pb-12">
                     <div class="flex justify-center gap-6 mb-4 font-bold">
                         <a href="#" class="hover:text-primary-500 transition-colors">Privacy</a>
                         <a href="#" class="hover:text-primary-500 transition-colors">Terms</a>
-                        <a href="#" class="hover:text-primary-500 transition-colors" @click.prevent="pricingOpen = true">Pricing</a>
                     </div>
                     <p>&copy; 2026 FreeHTML.pro. Professional export technology for everyone.</p>
                 </footer>
             </div>
         </main>
     </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!--  PROJECT EXPLORER MODAL                                         -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div 
+        x-show="previewOpen"
+        x-cloak
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0"
+        class="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+        @click.self="previewOpen = false"
+    >
+        <div 
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="scale-95 opacity-0"
+            x-transition:enter-end="scale-100 opacity-100"
+            class="w-full max-w-3xl max-h-[90vh] flex flex-col bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-700"
+        >
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-violet-600 to-fuchsia-600">
+                <div class="flex items-center gap-3 text-white">
+                    <div class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+                        <i class="ph-bold ph-folder-open text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-display font-bold text-base leading-tight" x-text="(previewManifest?.hostname || url) + ' — Next.js Project'"></h2>
+                        <p class="text-xs text-white/70" x-text="previewManifest ? `${previewManifest.stats.pages} pages · ${previewManifest.stats.files} files · ${previewManifest.stats.assets} assets` : 'Loading...'"></p>
+                    </div>
+                </div>
+                <button @click="previewOpen = false" class="w-8 h-8 rounded-xl bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-colors">
+                    <i class="ph-bold ph-x"></i>
+                </button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-slate-100 dark:border-slate-800 px-5 pt-3 gap-1">
+                <button @click="previewTab = 'files'" 
+                    :class="previewTab === 'files' ? 'border-b-2 border-violet-600 text-violet-600 dark:text-violet-400' : 'text-slate-500 hover:text-slate-700'"
+                    class="pb-2.5 px-3 text-sm font-bold transition-colors flex items-center gap-1.5">
+                    <i class="ph-bold ph-files text-base"></i> Files
+                    <span x-show="previewManifest" x-cloak class="text-[10px] bg-violet-100 dark:bg-violet-950 text-violet-700 px-1.5 py-0.5 rounded-full font-black" x-text="previewManifest?.stats?.files"></span>
+                </button>
+                <button @click="previewTab = 'pages'" 
+                    :class="previewTab === 'pages' ? 'border-b-2 border-violet-600 text-violet-600 dark:text-violet-400' : 'text-slate-500 hover:text-slate-700'"
+                    class="pb-2.5 px-3 text-sm font-bold transition-colors flex items-center gap-1.5">
+                    <i class="ph-bold ph-browsers text-base"></i> Pages
+                    <span x-show="previewManifest" x-cloak class="text-[10px] bg-violet-100 dark:bg-violet-950 text-violet-700 px-1.5 py-0.5 rounded-full font-black" x-text="previewManifest?.stats?.pages"></span>
+                </button>
+                <button @click="previewTab = 'deploy'" 
+                    :class="previewTab === 'deploy' ? 'border-b-2 border-violet-600 text-violet-600 dark:text-violet-400' : 'text-slate-500 hover:text-slate-700'"
+                    class="pb-2.5 px-3 text-sm font-bold transition-colors flex items-center gap-1.5">
+                    <i class="ph-bold ph-rocket-launch text-base"></i> Deploy
+                </button>
+            </div>
+
+            <!-- Body -->
+            <div class="flex-1 overflow-y-auto">
+
+                <!-- Loading state -->
+                <div x-show="previewLoading" x-cloak class="flex flex-col items-center justify-center py-20 gap-4 text-slate-400">
+                    <i class="ph-bold ph-spinner animate-spin text-4xl text-violet-400"></i>
+                    <p class="text-sm font-medium">Building project manifest...</p>
+                </div>
+
+                <!-- FILES TAB -->
+                <div x-show="previewTab === 'files' && !previewLoading" x-cloak class="p-5 space-y-4">
+                    <!-- Search -->
+                    <div class="relative">
+                        <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                        <input 
+                            type="text" 
+                            x-model="fileSearch"
+                            placeholder="Search files... (e.g. app, styles, components)"
+                            class="w-full pl-9 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-violet-400 transition-colors"
+                        >
+                    </div>
+
+                    <!-- Stats pills -->
+                    <div x-show="previewManifest" x-cloak class="flex flex-wrap gap-2">
+                        <span class="text-xs px-2.5 py-1 bg-violet-100 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400 rounded-full font-bold">⚛️ <span x-text="previewManifest?.stats?.pages || 0"></span> React pages</span>
+                        <span class="text-xs px-2.5 py-1 bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 rounded-full font-bold">🎨 <span x-text="previewManifest?.stats?.cssFiles || 0"></span> CSS files</span>
+                        <span class="text-xs px-2.5 py-1 bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 rounded-full font-bold">📸 <span x-text="previewManifest?.stats?.images || 0"></span> images</span>
+                        <span class="text-xs px-2.5 py-1 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 rounded-full font-bold">✍️ <span x-text="previewManifest?.stats?.fonts || 0"></span> fonts</span>
+                    </div>
+
+                    <!-- File list -->
+                    <div x-show="previewManifest" x-cloak class="border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden">
+                        <div class="bg-slate-50 dark:bg-slate-800/50 px-4 py-2.5 flex items-center justify-between text-xs font-bold text-slate-500 border-b border-slate-100 dark:border-slate-800">
+                            <span>File Path</span>
+                            <span>Size</span>
+                        </div>
+                        <div class="divide-y divide-slate-50 dark:divide-slate-800/50 max-h-72 overflow-y-auto">
+                            <template x-for="file in filteredFiles" :key="file.path">
+                                <div class="px-4 py-2.5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
+                                    <div class="flex items-center gap-2.5 min-w-0">
+                                        <span class="text-base flex-shrink-0" x-text="fileIcon(file.type)"></span>
+                                        <span class="text-xs font-mono text-slate-700 dark:text-slate-300 truncate" x-text="file.path"></span>
+                                    </div>
+                                    <span class="text-[11px] text-slate-400 font-medium flex-shrink-0 ml-4" x-text="formatBytes(file.size)"></span>
+                                </div>
+                            </template>
+                            <div x-show="filteredFiles.length === 0" x-cloak class="px-4 py-8 text-center text-sm text-slate-400">
+                                No files match your search.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- No manifest yet -->
+                    <div x-show="!previewManifest && !previewLoading" x-cloak class="text-center py-12 text-slate-400">
+                        <i class="ph-bold ph-warning text-3xl mb-3 text-amber-400 block"></i>
+                        <p class="text-sm">File list not available yet. Convert the site first.</p>
+                    </div>
+                </div>
+
+                <!-- PAGES TAB -->
+                <div x-show="previewTab === 'pages' && !previewLoading" x-cloak class="p-5 space-y-3">
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Every page in the original website was converted to a React component under <code class="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">app/</code>:</p>
+                    <div class="border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden">
+                        <div class="bg-slate-50 dark:bg-slate-800/50 px-4 py-2.5 text-xs font-bold text-slate-500 border-b border-slate-100 dark:border-slate-800">
+                            Pages crawled &amp; converted
+                        </div>
+                        <div class="divide-y divide-slate-50 dark:divide-slate-800/50 max-h-96 overflow-y-auto">
+                            <template x-for="(page, i) in (previewManifest?.pages || [])" :key="page.url">
+                                <div class="px-4 py-3 flex items-start gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                                    <div class="w-6 h-6 rounded-lg bg-violet-100 dark:bg-violet-950/50 flex items-center justify-center text-violet-600 dark:text-violet-400 text-[10px] font-black flex-shrink-0 mt-0.5" x-text="i + 1"></div>
+                                    <div class="min-w-0">
+                                        <div class="text-xs font-mono font-bold text-slate-700 dark:text-slate-300 truncate" x-text="page.route || '/'"></div>
+                                        <div class="text-[10px] text-slate-400 truncate mt-0.5" x-text="page.url"></div>
+                                    </div>
+                                    <div class="text-[10px] bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full font-bold flex-shrink-0 mt-0.5">JSX ✓</div>
+                                </div>
+                            </template>
+                            <div x-show="!previewManifest?.pages?.length" x-cloak class="px-4 py-8 text-center text-sm text-slate-400">
+                                Convert the site first to see pages.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DEPLOY TAB -->
+                <div x-show="previewTab === 'deploy' && !previewLoading" x-cloak class="p-5 space-y-5">
+                    <!-- Option 1: Vercel -->
+                    <div class="border border-slate-200 dark:border-slate-700 rounded-2xl p-5 space-y-3 hover:border-black transition-colors">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-black flex items-center justify-center">
+                                <svg width="18" height="18" viewBox="0 0 76 65" fill="white"><path d="M37.5274 0L75.0548 65H0L37.5274 0Z"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-sm">Deploy to Vercel</h3>
+                                <p class="text-xs text-slate-500">Fastest way — free hosting, global CDN, custom domain</p>
+                            </div>
+                        </div>
+                        <ol class="text-xs text-slate-600 dark:text-slate-400 space-y-1.5 pl-1">
+                            <li class="flex gap-2"><span class="font-bold text-black dark:text-white">1.</span> Unzip <code class="bg-slate-100 dark:bg-slate-800 px-1 rounded">nextjs-project.zip</code></li>
+                            <li class="flex gap-2"><span class="font-bold text-black dark:text-white">2.</span> Push folder to a new GitHub repository</li>
+                            <li class="flex gap-2"><span class="font-bold text-black dark:text-white">3.</span> Go to vercel.com → "New Project" → Import your repo</li>
+                            <li class="flex gap-2"><span class="font-bold text-black dark:text-white">4.</span> Click Deploy — done! 🎉</li>
+                        </ol>
+                        <button @click="deployToVercel()" class="w-full py-3 bg-black hover:bg-slate-800 text-white rounded-xl text-sm font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                            <svg width="14" height="14" viewBox="0 0 76 65" fill="white"><path d="M37.5274 0L75.0548 65H0L37.5274 0Z"/></svg>
+                            Open Vercel →
+                        </button>
+                    </div>
+
+                    <!-- Option 2: Local -->
+                    <div class="border border-slate-200 dark:border-slate-700 rounded-2xl p-5 space-y-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center">
+                                <i class="ph-bold ph-terminal text-white text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-sm">Run Locally</h3>
+                                <p class="text-xs text-slate-500">Open in your browser at localhost:3000</p>
+                            </div>
+                        </div>
+                        <div class="bg-slate-900 rounded-xl p-4 text-xs font-mono space-y-2 text-slate-300">
+                            <div><span class="text-slate-500"># 1. Unzip then cd into the folder</span></div>
+                            <div class="text-yellow-300">cd <span x-text="(previewManifest?.hostname || 'nextjs-project') + '-nextjs'"></span></div>
+                            <div class="mt-1"><span class="text-slate-500"># 2. Install dependencies</span></div>
+                            <div class="text-yellow-300">npm install</div>
+                            <div class="mt-1"><span class="text-slate-500"># 3. Start dev server</span></div>
+                            <div class="text-yellow-300">npm run dev</div>
+                            <div class="mt-2 text-emerald-400">✓ Open → http://localhost:3000</div>
+                        </div>
+                    </div>
+
+                    <!-- Option 3: GitHub -->
+                    <div class="border border-slate-200 dark:border-slate-700 rounded-2xl p-5 space-y-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center">
+                                <i class="ph-bold ph-github-logo text-white text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-sm">Push to GitHub</h3>
+                                <p class="text-xs text-slate-500">Store your code, then deploy anywhere</p>
+                            </div>
+                        </div>
+                        <div class="bg-slate-900 rounded-xl p-4 text-xs font-mono space-y-1.5 text-slate-300">
+                            <div class="text-slate-500"># Inside the unzipped project folder:</div>
+                            <div class="text-yellow-300">git init</div>
+                            <div class="text-yellow-300">git add .</div>
+                            <div class="text-yellow-300">git commit -m "Initial Next.js export"</div>
+                            <div class="text-yellow-300">git remote add origin YOUR_GITHUB_REPO_URL</div>
+                            <div class="text-yellow-300">git push -u origin main</div>
+                        </div>
+                        <button @click="pushToGitHub()" class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                            <i class="ph-bold ph-github-logo"></i>
+                            Create New GitHub Repo →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50 dark:bg-slate-900/50">
+                <button @click="redownloadZip()"
+                    class="flex-1 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-violet-400 rounded-xl text-sm font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                    <i class="ph-bold ph-download-simple text-violet-600"></i>
+                    Download ZIP
+                </button>
+                <button @click="previewTab = 'deploy'; previewTab = 'deploy'"
+                    class="flex-1 py-2.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-xl text-sm font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                    @click="previewTab = 'deploy'">
+                    <i class="ph-bold ph-rocket-launch"></i>
+                    Deploy Guide
+                </button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
