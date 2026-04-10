@@ -359,6 +359,37 @@ import { usePathname } from 'next/navigation';
 export default function WebflowInitializer() {
   const pathname = usePathname();
 
+  // Targeted error suppression: only silence errors originating from
+  // third-party Webflow/jQuery/GSAP scripts we downloaded into /js/.
+  // Errors from React components or app code are never suppressed.
+  useEffect(() => {
+    const THIRD_PARTY_PATTERNS = ['/js/webflow', '/js/jquery', '/js/gsap', '/js/ScrollTrigger', '/js/lenis', '/js/SplitText'];
+
+    const handleError = (e) => {
+      const src = e.filename || '';
+      if (THIRD_PARTY_PATTERNS.some((p) => src.includes(p))) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        console.warn('[Webflow script error suppressed]', e.message, src);
+        return true;
+      }
+    };
+    const handleRejection = (e) => {
+      const src = (e.reason && e.reason.stack) || '';
+      if (THIRD_PARTY_PATTERNS.some((p) => src.includes(p))) {
+        e.preventDefault();
+        console.warn('[Webflow unhandled rejection suppressed]', e.reason && e.reason.message);
+      }
+    };
+
+    window.addEventListener('error', handleError, true);
+    window.addEventListener('unhandledrejection', handleRejection);
+    return () => {
+      window.removeEventListener('error', handleError, true);
+      window.removeEventListener('unhandledrejection', handleRejection);
+    };
+  }, []);
+
   useEffect(() => {
     const initWebflow = () => {
       if (typeof window === 'undefined') return;
@@ -381,7 +412,7 @@ export default function WebflowInitializer() {
           if (window.ScrollTrigger) window.ScrollTrigger.refresh(true);
           window.dispatchEvent(new Event('resize'));
         } catch (err) {
-          console.warn('Webflow/GSAP re-init:', err.message);
+          console.warn('[Webflow re-init]', err.message);
         }
       }
     };
@@ -392,7 +423,6 @@ export default function WebflowInitializer() {
 
   useEffect(() => {
     return () => {
-      // Kill all ScrollTrigger instances on unmount to prevent ghost animations
       if (window.ScrollTrigger && typeof window.ScrollTrigger.getAll === 'function') {
         window.ScrollTrigger.getAll().forEach(function(t) { t.kill(); });
       }
@@ -528,14 +558,14 @@ function buildPackageJson(siteName, extraDeps = {}) {
             lint: 'next lint',
         },
         dependencies: {
-            next: '^14.2.0',
-            react: '^18.3.0',
-            'react-dom': '^18.3.0',
+            next: '^15.3.0',
+            react: '^19.0.0',
+            'react-dom': '^19.0.0',
             ...extraDeps,
         },
         devDependencies: {
-            eslint: '^8.0.0',
-            'eslint-config-next': '^14.2.0',
+            eslint: '^9.0.0',
+            'eslint-config-next': '^15.3.0',
             tailwindcss: '^3.4.0',
             '@types/node': '^20.0.0',
             '@types/react': '^18.3.0',
