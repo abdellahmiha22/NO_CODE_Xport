@@ -304,7 +304,7 @@ function extractCSSImports($) {
 
 // ── Build a Next.js page component from HTML ────────────────
 // Returns { code: string, inlineCss: string }
-function buildPageComponent(bodyHtml, pageName, isHomepage) {
+function buildPageComponent(bodyHtml, pageName, isHomepage, platform = 'webflow') {
     // Extract <style> blocks BEFORE htmlToJsx strips them.
     // Raw CSS braces { } break JSX parsing, so we save the CSS content
     // separately as a real .css file (imported by layout) and remove the
@@ -329,23 +329,18 @@ function buildPageComponent(bodyHtml, pageName, isHomepage) {
     // Escaping backticks and interpolation in jsxContent so they don't break this template literal
     const escapedJsx = jsxContent.replace(/`/g, '\\`').replace(/\$\{/g, '\\${');
 
-    // Clean page template:
-    // - 'use client' for client-side rendering
-    // - mounted state with `return null` to skip server rendering entirely
-    //   (prevents ALL hydration mismatches from Webflow attributes)
-    // - No inline Webflow init — handled globally by WebflowInitializer in layout
-    // - No Script tags — handled globally by layout
+    const isFramer = platform === 'framer';
     const code = `'use client';
-import { useState, useEffect } from 'react';
+${isFramer ? "import { motion } from 'framer-motion';" : "import { useState, useEffect } from 'react';"}
 
 export default function ${isHomepage ? 'Home' : componentName}Page() {
-  const [mounted, setMounted] = useState(false);
+${isFramer ? '' : `  const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
   if (!mounted) return null;
-
+`}
   return (
-    <div suppressHydrationWarning>
+    <div${isFramer ? '' : ' suppressHydrationWarning'}>
       ${escapedJsx}
     </div>
   );
@@ -394,6 +389,15 @@ export default function WebflowInitializer() {
     const timer = setTimeout(initWebflow, 300);
     return () => clearTimeout(timer);
   }, [pathname]);
+
+  useEffect(() => {
+    return () => {
+      // Kill all ScrollTrigger instances on unmount to prevent ghost animations
+      if (window.ScrollTrigger && typeof window.ScrollTrigger.getAll === 'function') {
+        window.ScrollTrigger.getAll().forEach(function(t) { t.kill(); });
+      }
+    };
+  }, []);
 
   return null;
 }
@@ -468,32 +472,6 @@ ${googleFontLinks}
 ${googleFontStylesheets}
       </head>
       <body suppressHydrationWarning>
-        {/* Suppress Webflow/GSAP runtime errors */}
-        <Script id="webflow-error-handler" strategy="beforeInteractive">{\`
-          (function() {
-            var suppress = ['timeline','buildSubTimeline','createTimeline',
-              'Cannot read properties of undefined','Webflow','jQuery',
-              'gsap','SplitText','lenis','scrollTo'];
-            window.addEventListener('error', function(e) {
-              if (suppress.some(function(k){ return e.message && e.message.indexOf(k) !== -1; })) {
-                e.stopImmediatePropagation(); e.preventDefault(); return true;
-              }
-            }, true);
-            window.addEventListener('unhandledrejection', function(e) {
-              if (e.reason && e.reason.message &&
-                  suppress.some(function(k){ return e.reason.message.includes(k); })) {
-                e.preventDefault();
-              }
-            });
-            window.gsap = window.gsap || {};
-            if (!window.SplitText) {
-              window.SplitText = function() {
-                return { revert: function(){}, chars:[], words:[], lines:[] };
-              };
-            }
-          })();
-        \`}</Script>
-
 ${scriptBlock}
 
         <WebflowInitializer />
@@ -538,7 +516,7 @@ a {
 }
 
 // ── Build package.json ──────────────────────────────────────
-function buildPackageJson(siteName) {
+function buildPackageJson(siteName, extraDeps = {}) {
     return JSON.stringify({
         name: siteName.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-'),
         version: '1.0.0',
@@ -553,25 +531,31 @@ function buildPackageJson(siteName) {
             next: '^14.2.0',
             react: '^18.3.0',
             'react-dom': '^18.3.0',
+            ...extraDeps,
         },
         devDependencies: {
             eslint: '^8.0.0',
             'eslint-config-next': '^14.2.0',
+            tailwindcss: '^3.4.0',
+            '@types/node': '^20.0.0',
+            '@types/react': '^18.3.0',
+            '@types/react-dom': '^18.3.0',
+            typescript: '^5.0.0',
         },
     }, null, 2);
 }
 
 // ── Build next.config.js ────────────────────────────────────
-function buildNextConfig(assetDomains) {
+function buildNextConfig(assetDomains, exportMode) {
     const domains = [...new Set(assetDomains)].filter(Boolean);
-    const domainsStr = domains.map(d => `'${d}'`).join(', ');
-    
+    const isStatic = exportMode === 'static';
+
     return `/** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
-  trailingSlash: true,
+${isStatic ? `  output: 'export',\n  trailingSlash: true,` : ''}
   images: {
-    unoptimized: true,
+    unoptimized: ${isStatic},
+    ${!isStatic ? `formats: ['image/avif', 'image/webp'],` : ''}
     ${domains.length > 0 ? `remotePatterns: [
 ${domains.map(d => `      { protocol: 'https', hostname: '${d}' },`).join('\n')}
     ],` : ''}
@@ -700,7 +684,8 @@ function getRoutePath(pageUrl, baseUrl) {
 // ═══════════════════════════════════════════════════════════════
 //  MAIN CONVERTER: Takes crawled pages + assets → Next.js project
 // ═══════════════════════════════════════════════════════════════
-function convertToNextJS(pages, collector, hostname) {
+function convertToNextJS(pages, collector, hostname, options = {}) {
+    const { exportMode = 'ssr', language = 'ts', platform = 'webflow' } = options;
     const files = []; // { path: string, content: string|Buffer }
     
     // ── Collect metadata from homepage ──
@@ -766,14 +751,15 @@ function convertToNextJS(pages, collector, hostname) {
             ? segments.map(s => s.replace(/[^a-zA-Z0-9]/g, '').replace(/^./, c => c.toUpperCase())).join('')
             : 'Home';
         
-        const { code: componentCode, inlineCss } = buildPageComponent(bodyHtml, pageName, isHomepage);
+        const { code: componentCode, inlineCss } = buildPageComponent(bodyHtml, pageName, isHomepage, platform);
 
         // Determine file path
+        const ext = language === 'ts' ? 'tsx' : 'js';
         let filePath;
         if (isHomepage) {
-            filePath = 'app/page.js';
+            filePath = `app/page.${ext}`;
         } else {
-            filePath = `app${routePath}/page.js`;
+            filePath = `app${routePath}/page.${ext}`;
         }
 
         files.push({ path: filePath, content: componentCode });
@@ -790,7 +776,7 @@ function convertToNextJS(pages, collector, hostname) {
     
     // ── WebflowInitializer component ──
     files.push({
-        path: 'app/WebflowInitializer.js',
+        path: language === 'ts' ? 'app/WebflowInitializer.tsx' : 'app/WebflowInitializer.js',
         content: buildWebflowInitializer(),
     });
 
@@ -833,19 +819,33 @@ function convertToNextJS(pages, collector, hostname) {
         }
     });
     
-    // ── jsconfig or path alias ──
-    files.push({
-        path: 'jsconfig.json',
-        content: JSON.stringify({
-            compilerOptions: {
-                paths: { '@/*': ['./*'] },
-            },
-        }, null, 2),
-    });
+    // ── tsconfig / jsconfig ──
+    if (language === 'ts') {
+        files.push({
+            path: 'tsconfig.json',
+            content: JSON.stringify({
+                compilerOptions: {
+                    target: 'ES2017', lib: ['dom', 'dom.iterable', 'esnext'],
+                    allowJs: true, skipLibCheck: true, strict: true,
+                    noEmit: true, esModuleInterop: true, moduleResolution: 'bundler',
+                    resolveJsonModule: true, isolatedModules: true, jsx: 'preserve',
+                    incremental: true, paths: { '@/*': ['./*'] },
+                },
+                include: ['next-env.d.ts', '**/*.ts', '**/*.tsx'],
+                exclude: ['node_modules'],
+            }, null, 2),
+        });
+    } else {
+        files.push({
+            path: 'jsconfig.json',
+            content: JSON.stringify({ compilerOptions: { paths: { '@/*': ['./*'] } } }, null, 2),
+        });
+    }
     
     // ── Config files ──
-    files.push({ path: 'package.json', content: buildPackageJson(hostname) });
-    files.push({ path: 'next.config.js', content: buildNextConfig([...new Set(assetDomains)].slice(0, 10)) });
+    const extraDeps = platform === 'framer' ? { 'framer-motion': '^11.0.0' } : {};
+    files.push({ path: 'package.json', content: buildPackageJson(hostname, extraDeps) });
+    files.push({ path: 'next.config.js', content: buildNextConfig([...new Set(assetDomains)].slice(0, 10), exportMode) });
     files.push({ path: 'vercel.json', content: buildVercelJson() });
     files.push({ path: '.gitignore', content: buildGitignore() });
     files.push({ path: 'README.md', content: buildReadme(hostname, pages.length) });
