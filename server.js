@@ -175,6 +175,12 @@ class AssetCollector {
 function removeWatermarks($) {
     // Webflow badges
     $('.w-webflow-badge').remove();
+    // Webflow template promotional widgets (pentaclay / "Buy For $79")
+    $('.template-buttons-wrapper').remove();
+    $('.template-promotional-button-wrap').remove();
+    $('.grab-now-button').remove();
+    $('a[href*="webflow.com/templates"]').closest('div').remove();
+    $('a[href*="pentaclay.com"]').closest('div').remove();
     // Framer badges
     $('#__framer-badge-container').remove();
     $('a[href*="framer.com/showcase"]').remove();
@@ -191,10 +197,12 @@ function removeWatermarks($) {
     $('[id*="watermark"]').remove();
     $('[class*="watermark"]').remove();
 
-    // Inject CSS to hide dynamically-added watermarks
+    // Inject CSS to hide dynamically-added watermarks (defense-in-depth)
     const styleText = `
     /* Webflow Watermark Removal */
     .w-webflow-badge, a.w-webflow-badge, a[href*="webflow.com?utm_campaign=brandjs"] { display: none !important; opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; z-index: -9999 !important; }
+    /* Webflow Template Promotional Widget */
+    .template-buttons-wrapper, .template-promotional-button-wrap, .grab-now-button, a[href*="webflow.com/templates"], a[href*="pentaclay.com"] { display: none !important; opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; z-index: -9999 !important; }
     /* Framer Watermark Removal */
     #__framer-badge-container, a[href*="framer.com/showcase"] { display: none !important; opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; z-index: -9999 !important; }
     /* Wix Watermark Removal */
@@ -850,6 +858,21 @@ app.post('/api/export/zip', async (req, res) => {
             progress.assetsDownloaded = downloadedCount;
         }
 
+        // ── Phase 2.5: AI Intelligence Extraction ─────────────
+        const aiAnalyzer = require('./ai-analyzer');
+        const firstPageHtml = pageData.length > 0 ? pageData[0].$.html() : '';
+        const cssContentsForAI = collector.getAllByType('css')
+            .filter(a => a.downloaded && a.buffer)
+            .map(a => a.buffer.toString('utf-8'))
+            .join('\n');
+        
+        let aiReports = null;
+        if (firstPageHtml) {
+            console.log(`\n🧠 Generating AI Intelligence Reports...`);
+            if (progress) progress.status = 'analyzing';
+            aiReports = await aiAnalyzer.analyzeWebsite(firstPageHtml, cssContentsForAI, targetUrl);
+        }
+
         // ── Phase 3: Rewrite URLs and build ZIP ───────────────
         res.setHeader('Content-Type', 'application/zip');
         res.setHeader('Content-Disposition', `attachment; filename="${hostname}-full-export.zip"`);
@@ -915,6 +938,15 @@ app.post('/api/export/zip', async (req, res) => {
         }
         const mediaCount = collector.getAllByType('media').filter(a => a.downloaded).length;
         if (mediaCount > 0) console.log(`  🎬 Added: ${mediaCount} media files`);
+
+        // Add AI Analysis Reports
+        if (aiReports) {
+            console.log(`  🧠 Added AI Analysis Reports to ZIP`);
+            archive.append(aiReports.designSystem, { name: 'analysis/design-system.json' });
+            archive.append(aiReports.funnelMapping, { name: 'analysis/funnel-mapping.md' });
+            archive.append(aiReports.frontendPsychology, { name: 'analysis/frontend-psychology.md' });
+            archive.append(aiReports.uxBreakdown, { name: 'analysis/ux-ui-breakdown.md' });
+        }
 
         // Add a README
         const readme = `# ${hostname} — Full Site Export
