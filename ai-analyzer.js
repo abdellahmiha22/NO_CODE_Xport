@@ -14,7 +14,7 @@ async function analyzeWebsite(html, cssTokens, targetUrl) {
     // If no API key is provided, we gracefully skip AI analysis
     if (!process.env.GEMINI_API_KEY) {
         console.warn('⚠️ GEMINI_API_KEY not found in .env. Skipping AI analysis.');
-        return null;
+        return { error: 'GEMINI_API_KEY not found in environment variables.' };
     }
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -103,7 +103,7 @@ Output a Markdown document detailing:
 
     } catch (error) {
         console.error('  ❌ AI Analysis Error:', error.message);
-        return null;
+        return { error: `AI Analysis failed: ${error.message}` };
     }
 }
 

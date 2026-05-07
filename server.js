@@ -941,11 +941,16 @@ app.post('/api/export/zip', async (req, res) => {
 
         // Add AI Analysis Reports
         if (aiReports) {
-            console.log(`  🧠 Added AI Analysis Reports to ZIP`);
-            archive.append(aiReports.designSystem, { name: 'analysis/design-system.json' });
-            archive.append(aiReports.funnelMapping, { name: 'analysis/funnel-mapping.md' });
-            archive.append(aiReports.frontendPsychology, { name: 'analysis/frontend-psychology.md' });
-            archive.append(aiReports.uxBreakdown, { name: 'analysis/ux-ui-breakdown.md' });
+            if (aiReports.error) {
+                console.log(`  ⚠️ AI Analysis failed, adding error log to ZIP`);
+                archive.append(aiReports.error, { name: 'analysis/analysis-error.txt' });
+            } else {
+                console.log(`  🧠 Added AI Analysis Reports to ZIP`);
+                archive.append(aiReports.designSystem, { name: 'analysis/design-system.json' });
+                archive.append(aiReports.funnelMapping, { name: 'analysis/funnel-mapping.md' });
+                archive.append(aiReports.frontendPsychology, { name: 'analysis/frontend-psychology.md' });
+                archive.append(aiReports.uxBreakdown, { name: 'analysis/ux-ui-breakdown.md' });
+            }
         }
 
         // Add a README
