@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { GoogleGenAI } = require('@google/genai');
+const Anthropic = require('@anthropic-ai/sdk');
 
 // Clean up HTML to reduce token usage and improve AI focus
 function cleanHtmlForAI(html) {
@@ -7,17 +7,25 @@ function cleanHtmlForAI(html) {
     // Basic cleanup: remove massive base64 strings and inline SVGs to save tokens
     let cleaned = html.replace(/data:image\/[^;]+;base64,[a-zA-Z0-9+/=]+/g, 'data:image/...');
     cleaned = cleaned.replace(/<svg[^>]*>([\s\S]*?)<\/svg>/gi, '<svg>...</svg>');
+    // Truncate to avoid exceeding context window (250k chars is well within 200k token limits)
+    if (cleaned.length > 250000) {
+        cleaned = cleaned.substring(0, 250000) + '\n<!-- TRUNCATED FOR AI -->';
+    }
     return cleaned;
 }
 
 async function analyzeWebsite(html, cssTokens, targetUrl) {
     // If no API key is provided, we gracefully skip AI analysis
-    if (!process.env.GEMINI_API_KEY) {
-        console.warn('⚠️ GEMINI_API_KEY not found in .env. Skipping AI analysis.');
-        return { error: 'GEMINI_API_KEY not found in environment variables.' };
+    if (!process.env.AI_GATEWAY_API_KEY) {
+        console.warn('⚠️ AI_GATEWAY_API_KEY not found in .env. Skipping AI analysis.');
+        return { error: 'AI_GATEWAY_API_KEY not found in environment variables.' };
     }
 
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const anthropic = new Anthropic({
+        apiKey: process.env.AI_GATEWAY_API_KEY,
+        baseURL: 'https://ai-gateway.vercel.sh',
+    });
+
     const cleanedHtml = cleanHtmlForAI(html);
 
     const basePromptContext = `
@@ -76,29 +84,36 @@ Output a Markdown document detailing:
 4. Mobile-first observations
         `;
 
+        // Helper function to call Claude
+        const callClaude = (prompt) => anthropic.messages.create({
+            model: 'anthropic/claude-3-5-sonnet-20241022', // Vercel Gateway syntax
+            max_tokens: 3000,
+            messages: [{ role: 'user', content: prompt + '\n\nHTML:\n' + cleanedHtml }]
+        });
+
         // Run all prompts concurrently
         const [dsRes, funnelRes, psychRes, uxRes] = await Promise.all([
-            ai.models.generateContent({ model: 'gemini-2.5-flash', contents: [designSystemPrompt, { text: cleanedHtml }] }),
-            ai.models.generateContent({ model: 'gemini-2.5-flash', contents: [funnelPrompt, { text: cleanedHtml }] }),
-            ai.models.generateContent({ model: 'gemini-2.5-flash', contents: [psychPrompt, { text: cleanedHtml }] }),
-            ai.models.generateContent({ model: 'gemini-2.5-flash', contents: [uxPrompt, { text: cleanedHtml }] })
+            callClaude(designSystemPrompt),
+            callClaude(funnelPrompt),
+            callClaude(psychPrompt),
+            callClaude(uxPrompt)
         ]);
 
         let designSystemJson;
         try {
             // Attempt to parse to ensure it's valid JSON, strip markdown if necessary
-            let rawJson = dsRes.text().replace(/^```json\n/, '').replace(/\n```$/, '').trim();
+            let rawJson = dsRes.content[0].text.replace(/^```json\n/, '').replace(/\n```$/, '').trim();
             designSystemJson = JSON.parse(rawJson);
         } catch (e) {
             console.warn('  ⚠️ Failed to parse Design System JSON. Returning raw string.');
-            designSystemJson = { error: "Failed to parse JSON", raw: dsRes.text() };
+            designSystemJson = { error: "Failed to parse JSON", raw: dsRes.content[0].text };
         }
 
         return {
             designSystem: JSON.stringify(designSystemJson, null, 2),
-            funnelMapping: funnelRes.text(),
-            frontendPsychology: psychRes.text(),
-            uxBreakdown: uxRes.text()
+            funnelMapping: funnelRes.content[0].text,
+            frontendPsychology: psychRes.content[0].text,
+            uxBreakdown: uxRes.content[0].text
         };
 
     } catch (error) {

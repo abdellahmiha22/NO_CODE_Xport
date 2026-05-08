@@ -10,6 +10,7 @@ const { detectPlatform } = require('./platform-detector');
 const { convertFramerToNextJS } = require('./framer-converter');
 const { convertForms } = require('./form-converter');
 const { extractTokens, buildTailwindConfig } = require('./token-extractor');
+const { captureSnapshot, closeBrowser } = require('./snapshot');
 
 const app = express();
 app.use(cors({ exposedHeaders: ['Content-Disposition'] }));
@@ -547,16 +548,23 @@ function computeRelativePath(fromDir, toPath) {
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36';
 
 async function fetchPage(targetUrl) {
-    const response = await axios.get(targetUrl, {
-        headers: {
-            'User-Agent': USER_AGENT,
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.9',
-        },
-        timeout: 20000,
-        responseType: 'text',
-    });
-    return response.data;
+    try {
+        console.log(`  [Snapshot] Capturing fully rendered HTML for: ${targetUrl}`);
+        const html = await captureSnapshot(targetUrl);
+        return html;
+    } catch (err) {
+        console.warn(`  [Snapshot] Failed to capture snapshot, falling back to raw HTML for: ${targetUrl}`);
+        const response = await axios.get(targetUrl, {
+            headers: {
+                'User-Agent': USER_AGENT,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+            },
+            timeout: 20000,
+            responseType: 'text',
+        });
+        return response.data;
+    }
 }
 
 async function downloadAsset(url, timeout = 30000) {
